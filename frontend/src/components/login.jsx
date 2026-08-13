@@ -5,16 +5,6 @@ const CardBackground = ({ activeView }) => {
   return <div className={`card-bg ${activeView === "login" ? "login" : ""}`} />;
 };
 
-const SocialButtons = () => {
-  return (
-    <div className="sso">
-      <a className="fa-brands fa-facebook"></a>
-      <a className="fa-brands fa-twitter"></a>
-      <a className="fa-brands fa-linkedin"></a>
-    </div>
-  );
-};
-
 const HeroPanel = ({ type, activeView, title, text, buttonText, onToggle }) => {
   return (
     <div className={`hero ${type} ${activeView === type ? "active" : ""}`}>
