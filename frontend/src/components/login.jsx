@@ -28,6 +28,7 @@ const RegisterForm = ({ activeView }) => {
       <form>
         <input type="text" placeholder="Full name" />
         <input type="email" placeholder="Email address" />
+        <input type="text" placeholder="Branch" />
         <input type="password" placeholder="Password" />
         <button>SIGN UP</button>
       </form>
