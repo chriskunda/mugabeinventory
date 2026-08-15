@@ -1,0 +1,42 @@
+@import "../styles/dashboard-tokens.css";
+
+.db-grid-2 {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 980px) {
+  .db-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.db-ledger-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--db-line);
+  font-size: 13.5px;
+}
+
+.db-ledger-row:last-of-type {
+  border-bottom: none;
+}
+
+.db-ledger-row.total {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--db-ink);
+  border-bottom: none;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.db-ledger-row .db-num.pos {
+  color: #4f7a3f;
+}
+.db-ledger-row .db-num.neg {
+  color: var(--db-clay);
+}

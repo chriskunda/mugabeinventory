@@ -1,0 +1,5 @@
+@import "../styles/dashboard-tokens.css";
+
+/* Manager dashboard currently reuses the shared panel/table/stat styles
+   from dashboard-tokens.css — this file is here for anything
+   manager-view-specific you add later. */
