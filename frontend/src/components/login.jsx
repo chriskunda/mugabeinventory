@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import "./login.css";
 
 const CardBackground = ({ activeView }) => {
@@ -18,35 +20,93 @@ const HeroPanel = ({ type, activeView, title, text, buttonText, onToggle }) => {
 };
 
 const RegisterForm = ({ activeView }) => {
+  const { register } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ name: "", email: "", branch: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const user = await register(form);
+      // public registration always creates a manager account (see backend authController)
+      navigate(user.role === "admin" ? "/admin" : "/manager");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div
-      className={`form register ${activeView === "register" ? "active" : ""}`}
-    >
+    <div className={`form register ${activeView === "register" ? "active" : ""}`}>
       <h2>Sign Up</h2>
       <p>Or use your email address</p>
 
-      <form>
-        <input type="text" placeholder="Full name" />
-        <input type="email" placeholder="Email address" />
-        <input type="text" placeholder="Branch" />
-        <input type="password" placeholder="Password" />
-        <button>SIGN UP</button>
+      <form onSubmit={handleSubmit}>
+        <input type="text" placeholder="Full name" value={form.name} onChange={update("name")} required />
+        <input type="email" placeholder="Email address" value={form.email} onChange={update("email")} required />
+        <input type="text" placeholder="Branch" value={form.branch} onChange={update("branch")} required />
+        <input
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={update("password")}
+          minLength={6}
+          required
+        />
+        {error && <p style={{ color: "#b23b2a", opacity: 1 }}>{error}</p>}
+        <button disabled={loading}>{loading ? "SIGNING UP..." : "SIGN UP"}</button>
       </form>
     </div>
   );
 };
 
 const LoginForm = ({ activeView }) => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const user = await login(form.email, form.password);
+      navigate(user.role === "admin" ? "/admin" : "/manager");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className={`form login ${activeView === "login" ? "active" : ""}`}>
       <h2>Login</h2>
       <p>Or use your email address</p>
 
-      <form>
-        <input type="text" placeholder="Email" />
-        <input type="email" placeholder="Password" />
+      <form onSubmit={handleSubmit}>
+        <input type="email" placeholder="Email" value={form.email} onChange={update("email")} required />
+        <input
+          type="password"
+          placeholder="Password"
+          value={form.password}
+          onChange={update("password")}
+          required
+        />
         <a style={{ paddingTop: 6, marginBottom: 7 }}>Forgot password?</a>
-        <button>LOGIN</button>
+        {error && <p style={{ color: "#b23b2a", opacity: 1 }}>{error}</p>}
+        <button disabled={loading}>{loading ? "LOGGING IN..." : "LOGIN"}</button>
       </form>
     </div>
   );
