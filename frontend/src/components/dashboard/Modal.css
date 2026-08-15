@@ -1,0 +1,175 @@
+@import "../../styles/dashboard-tokens.css";
+
+.db-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 38, 37, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 20px;
+}
+
+.db-modal {
+  width: 100%;
+  max-width: 480px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: var(--db-surface);
+  border-radius: var(--db-radius);
+  box-shadow: 0 20px 60px rgba(33, 38, 37, 0.25);
+  font-family: var(--db-font-sans);
+  color: var(--db-ink);
+}
+
+.db-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 22px 22px 14px;
+  border-bottom: 1px solid var(--db-line);
+}
+
+.db-modal-head h2 {
+  margin: 0;
+  font-family: var(--db-font-serif);
+  font-size: 19px;
+}
+
+.db-modal-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--db-muted);
+}
+
+.db-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--db-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+.db-modal-close:hover {
+  color: var(--db-ink);
+}
+
+.db-modal-body {
+  padding: 18px 22px 22px;
+}
+
+/* shared form styles */
+.db-field {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.db-field label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--db-ink);
+}
+
+.db-field input,
+.db-field select,
+.db-field textarea {
+  font-family: inherit;
+  border: 1px solid var(--db-line);
+  background: var(--db-cream);
+  border-radius: var(--db-radius-sm);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--db-ink);
+}
+
+.db-field input:focus,
+.db-field select:focus,
+.db-field textarea:focus {
+  outline: 2px solid var(--db-rust);
+  outline-offset: 1px;
+  background: #fff;
+}
+
+.db-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.db-line-items {
+  border: 1px solid var(--db-line);
+  border-radius: var(--db-radius-sm);
+  padding: 10px;
+  margin-bottom: 14px;
+}
+
+.db-line-item {
+  display: grid;
+  grid-template-columns: 1fr 70px 90px 28px;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.db-line-item:last-child {
+  margin-bottom: 0;
+}
+
+.db-line-item input,
+.db-line-item select {
+  font-family: inherit;
+  border: 1px solid var(--db-line);
+  border-radius: var(--db-radius-sm);
+  padding: 8px 9px;
+  font-size: 13px;
+  width: 100%;
+}
+
+.db-remove-line {
+  border: none;
+  background: var(--db-clay-soft);
+  color: var(--db-clay);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.db-add-line {
+  border: 1px dashed var(--db-line);
+  background: transparent;
+  color: var(--db-rust);
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: var(--db-radius-sm);
+  padding: 8px;
+  width: 100%;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.db-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--db-line);
+}
+
+@media (max-width: 480px) {
+  .db-field-row {
+    grid-template-columns: 1fr;
+  }
+  .db-line-item {
+    grid-template-columns: 1fr 60px 34px;
+  }
+  .db-line-item select {
+    display: none;
+  }
+}
