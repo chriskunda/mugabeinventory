@@ -1,0 +1,335 @@
+/*
+  Dashboard design tokens
+  Extends the palette already established in login.css (#8B3A2A / #ac4733 / #212625)
+  so the dashboard reads as the same product, not a new skin.
+*/
+:root {
+  /* brand */
+  --db-ink: #212625;
+  --db-rust: #8b3a2a;
+  --db-rust-deep: #6f2e22;
+  --db-rust-soft: #f4e3dd;
+
+  /* surfaces */
+  --db-cream: #faf6f1;
+  --db-surface: #ffffff;
+  --db-line: #e8e1d8;
+  --db-muted: #96959e;
+
+  /* signal colors — kept warm so they belong to the same family, but
+     distinct enough not to be confused with the brand rust */
+  --db-gold: #b3812f;
+  --db-gold-soft: #f7ecd8;
+  --db-clay: #a23b2a;
+  --db-clay-soft: #f7e3de;
+
+  /* type */
+  --db-font-sans: "Euclid Circular B", -apple-system, "Segoe UI", Inter, sans-serif;
+  --db-font-serif: Fraunces, Georgia, "Times New Roman", serif;
+  --db-font-mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+
+  /* layout */
+  --db-sidebar-w: 232px;
+  --db-radius: 14px;
+  --db-radius-sm: 8px;
+  --db-shadow: 0 1px 2px rgba(33, 38, 37, 0.04), 0 8px 24px rgba(33, 38, 37, 0.05);
+}
+
+.dashboard-app * {
+  box-sizing: border-box;
+}
+
+.dashboard-app {
+  font-family: var(--db-font-sans);
+  color: var(--db-ink);
+  background: var(--db-cream);
+}
+
+.dashboard-app ::selection {
+  background: var(--db-rust-soft);
+}
+
+/* ---- shared building blocks reused across Admin + Manager ---- */
+
+.db-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.db-page-head h1 {
+  margin: 0 0 4px;
+  font-family: var(--db-font-serif);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.db-page-head p {
+  margin: 0;
+  color: var(--db-muted);
+  font-size: 14px;
+}
+
+.db-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.db-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: 0.18s ease;
+  white-space: nowrap;
+}
+
+.db-btn-primary {
+  background: var(--db-ink);
+  color: #fff;
+}
+.db-btn-primary:hover {
+  background: var(--db-rust-deep);
+}
+
+.db-btn-outline {
+  background: transparent;
+  border-color: var(--db-line);
+  color: var(--db-ink);
+}
+.db-btn-outline:hover {
+  border-color: var(--db-rust);
+  color: var(--db-rust);
+}
+
+.db-btn-ghost {
+  background: transparent;
+  color: var(--db-muted);
+  padding: 8px 12px;
+}
+.db-btn-ghost:hover {
+  color: var(--db-ink);
+}
+
+.db-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---- stat cards: the signature "ledger" treatment ---- */
+/* a soft torn/perforated top edge, like a receipt slip, tying the
+   numbers back to the daily-report / receipt subject matter */
+
+.db-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.db-stat-card {
+  position: relative;
+  background: var(--db-surface);
+  border: 1px solid var(--db-line);
+  border-radius: var(--db-radius);
+  padding: 20px 20px 18px;
+  box-shadow: var(--db-shadow);
+  overflow: hidden;
+}
+
+.db-stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: radial-gradient(circle at 6px 0, transparent 4px, var(--db-cream) 4.5px) repeat-x;
+  background-size: 12px 6px;
+  background-position: 4px -3px;
+}
+
+.db-stat-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--db-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+.db-stat-value {
+  font-family: var(--db-font-serif);
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.db-stat-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--db-font-mono);
+}
+
+.db-stat-trend.up {
+  color: #4f7a3f;
+}
+.db-stat-trend.down {
+  color: var(--db-clay);
+}
+.db-stat-trend span.ctx {
+  color: var(--db-muted);
+  font-family: var(--db-font-sans);
+  font-weight: 400;
+}
+
+/* ---- panels / tables shared shell ---- */
+
+.db-panel {
+  background: var(--db-surface);
+  border: 1px solid var(--db-line);
+  border-radius: var(--db-radius);
+  box-shadow: var(--db-shadow);
+  margin-bottom: 24px;
+}
+
+.db-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--db-line);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.db-panel-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.db-panel-head .sub {
+  font-size: 12.5px;
+  color: var(--db-muted);
+  margin-top: 2px;
+}
+
+.db-panel-body {
+  padding: 6px 22px 20px;
+}
+
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.db-table th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--db-muted);
+  font-weight: 600;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--db-line);
+}
+
+.db-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--db-line);
+  vertical-align: middle;
+}
+
+.db-table tr:last-child td {
+  border-bottom: none;
+}
+
+.db-num {
+  font-family: var(--db-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.db-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.db-badge.submitted {
+  background: var(--db-gold-soft);
+  color: var(--db-gold);
+}
+.db-badge.approved {
+  background: #e7efe1;
+  color: #4f7a3f;
+}
+.db-badge.edit_requested {
+  background: var(--db-clay-soft);
+  color: var(--db-clay);
+}
+.db-badge.pending {
+  background: var(--db-rust-soft);
+  color: var(--db-rust);
+}
+
+.db-empty {
+  text-align: center;
+  color: var(--db-muted);
+  font-size: 13.5px;
+  padding: 30px 10px;
+}
+
+@media (max-width: 720px) {
+  .db-table thead {
+    display: none;
+  }
+  .db-table,
+  .db-table tbody,
+  .db-table tr,
+  .db-table td {
+    display: block;
+    width: 100%;
+  }
+  .db-table tr {
+    border-bottom: 1px solid var(--db-line);
+    padding: 10px 0;
+  }
+  .db-table td {
+    border: none;
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .db-table td::before {
+    content: attr(data-label);
+    color: var(--db-muted);
+    font-size: 11.5px;
+    text-transform: uppercase;
+  }
+}
