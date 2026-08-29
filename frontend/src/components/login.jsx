@@ -21,10 +21,10 @@ const HeroPanel = ({ type, activeView, title, text, buttonText, onToggle }) => {
 
 const RegisterForm = ({ activeView }) => {
   const { register } = useAuth();
-  const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", branch: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const update = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -33,15 +33,25 @@ const RegisterForm = ({ activeView }) => {
     setError("");
     setLoading(true);
     try {
-      const user = await register(form);
-      // public registration always creates a manager account (see backend authController)
-      navigate(user.role === "admin" ? "/admin" : "/manager");
+      await register(form);
+      setSubmitted(true);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <div className={`form register ${activeView === "register" ? "active" : ""}`}>
+        <h2>Request sent</h2>
+        <p style={{ maxWidth: 260, textAlign: "center" }}>
+          Your account is waiting for admin approval. You'll be able to log in once it's approved.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className={`form register ${activeView === "register" ? "active" : ""}`}>
@@ -61,7 +71,7 @@ const RegisterForm = ({ activeView }) => {
           required
         />
         {error && <p style={{ color: "#b23b2a", opacity: 1 }}>{error}</p>}
-        <button disabled={loading}>{loading ? "SIGNING UP..." : "SIGN UP"}</button>
+        <button disabled={loading}>{loading ? "SUBMITTING..." : "SIGN UP"}</button>
       </form>
     </div>
   );

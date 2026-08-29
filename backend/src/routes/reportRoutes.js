@@ -3,6 +3,7 @@ import {
   createReport,
   getMyReports,
   getAllReports,
+  getReportById,
   requestEdit,
   resolveEditRequest,
   updateReport,
@@ -15,12 +16,12 @@ const router = express.Router();
 
 router.use(protect);
 
-// specific paths must come before "/:id" routes
 router.get("/mine", getMyReports);
 router.get("/export-all", restrictTo("admin"), exportMonthExcel);
 router.get("/", restrictTo("admin"), getAllReports);
 
 router.post("/", createReport);
+router.get("/:id", getReportById);
 router.patch("/:id/request-edit", requestEdit);
 router.patch("/:id/resolve-edit", restrictTo("admin"), resolveEditRequest);
 router.put("/:id", updateReport);

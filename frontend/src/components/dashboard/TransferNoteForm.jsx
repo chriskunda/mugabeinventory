@@ -1,5 +1,7 @@
 import { useState } from "react";
 
+const DEFAULT_BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
+
 let uid = 0;
 const newLine = () => ({ id: `t${uid++}`, product: "", qty: 1 });
 
@@ -7,7 +9,7 @@ const newLine = () => ({ id: `t${uid++}`, product: "", qty: 1 });
  * branches: string[] of branch names to populate the "to" dropdown.
  * onSubmit receives the assembled transfer note payload.
  */
-const TransferNoteForm = ({ branches = [], fromBranch, onSubmit, onCancel }) => {
+const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, onCancel }) => {
   const [toBranch, setToBranch] = useState(branches.find((b) => b !== fromBranch) || "");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState([newLine()]);

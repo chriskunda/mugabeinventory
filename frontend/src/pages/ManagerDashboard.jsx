@@ -1,53 +1,52 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { reportsApi } from "../api/reports";
+import { transfersApi } from "../api/transfers";
 import StatCard from "../components/dashboard/StatCard";
 import Modal from "../components/dashboard/Modal";
 import DailyReportForm from "../components/dashboard/DailyReportForm";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
 import "./ManagerDashboard.css";
 
-// ---- placeholder data — replace with API calls once the backend is wired up ----
-const BRANCH = "Remera";
-const BRANCHES = ["Kimironko", "Nyabugogo", "Remera", "Kicukiro", "Main"];
-
-const INITIAL_REPORTS = [
-  { id: 1, date: "2026-08-12", total: 186_000, status: "submitted" },
-  { id: 2, date: "2026-08-11", total: 214_500, status: "edit_requested" },
-  { id: 3, date: "2026-08-10", total: 172_800, status: "submitted" },
-];
-
-const INITIAL_TRANSFERS = [
-  { id: 1, date: "2026-08-11", to: "Kicukiro", items: 3, status: "pending" },
-  { id: 2, date: "2026-08-08", to: "Main", items: 6, status: "approved" },
-];
-
-const fmt = (n) => `${n.toLocaleString()} RWF`;
+const fmt = (n) => `${(n || 0).toLocaleString()} RWF`;
 
 const ManagerDashboard = () => {
-  const [openModal, setOpenModal] = useState(null); // "report" | "transfer" | null
-  const [reports, setReports] = useState(INITIAL_REPORTS);
-  const [transfers, setTransfers] = useState(INITIAL_TRANSFERS);
+  const { user } = useAuth();
+  const [openModal, setOpenModal] = useState(null);
+  const [reports, setReports] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const monthTotal = reports.reduce((s, r) => s + r.total, 0);
-
-  const requestEdit = (id) =>
-    setReports((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status: "edit_requested" } : r))
-    );
-
-  const handleNewReport = (payload) => {
-    setReports((prev) => [
-      { id: prev.length + 1, date: payload.date, total: payload.total, status: "submitted" },
-      ...prev,
-    ]);
-    setOpenModal(null);
+  const load = () => {
+    setLoading(true);
+    Promise.all([reportsApi.mine(), transfersApi.list()])
+      .then(([r, t]) => {
+        setReports(r);
+        setTransfers(t);
+      })
+      .finally(() => setLoading(false));
   };
 
-  const handleNewTransfer = (payload) => {
-    setTransfers((prev) => [
-      { id: prev.length + 1, date: payload.date, to: payload.toBranch, items: payload.lines.length, status: "pending" },
-      ...prev,
-    ]);
+  useEffect(load, []);
+
+  const monthTotal = reports.reduce((s, r) => s + r.grandTotal, 0);
+
+  const requestEdit = async (id) => {
+    const reason = window.prompt("What needs to change on this report?") || "";
+    await reportsApi.requestEdit(id, reason);
+    load();
+  };
+
+  const handleNewReport = async (payload) => {
+    await reportsApi.create(payload);
     setOpenModal(null);
+    load();
+  };
+
+  const handleNewTransfer = async (payload) => {
+    await transfersApi.create(payload);
+    setOpenModal(null);
+    load();
   };
 
   return (
@@ -55,7 +54,7 @@ const ManagerDashboard = () => {
       <div className="db-page-head">
         <div>
           <h1>Overview</h1>
-          <p>{BRANCH} branch — today's numbers at a glance.</p>
+          <p>{user?.branch} branch — today's numbers at a glance.</p>
         </div>
         <div className="db-actions">
           <button className="db-btn db-btn-outline" onClick={() => setOpenModal("transfer")}>
@@ -68,13 +67,10 @@ const ManagerDashboard = () => {
       </div>
 
       <div className="db-stat-grid">
-        <StatCard label="Sales this month" value={fmt(monthTotal)} />
+        <StatCard label="Sales this period" value={fmt(monthTotal)} />
         <StatCard label="Reports submitted" value={reports.length} />
         <StatCard label="Pending transfer notes" value={transfers.filter((t) => t.status === "pending").length} />
-        <StatCard
-          label="Last report status"
-          value={reports[0]?.status.replace("_", " ") ?? "—"}
-        />
+        <StatCard label="Last report status" value={reports[0]?.status.replace("_", " ") ?? "—"} />
       </div>
 
       <div className="db-panel">
@@ -85,36 +81,42 @@ const ManagerDashboard = () => {
           </div>
         </div>
         <div className="db-panel-body">
-          <table className="db-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Total sales</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {reports.map((r) => (
-                <tr key={r.id}>
-                  <td data-label="Date">{r.date}</td>
-                  <td data-label="Total" className="db-num">{fmt(r.total)}</td>
-                  <td data-label="Status">
-                    <span className={`db-badge ${r.status}`}>{r.status.replace("_", " ")}</span>
-                  </td>
-                  <td data-label="">
-                    {r.status === "submitted" ? (
-                      <button className="db-btn db-btn-ghost" onClick={() => requestEdit(r.id)}>
-                        Request edit
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: 12.5, color: "var(--db-muted)" }}>Awaiting admin</span>
-                    )}
-                  </td>
+          {loading ? (
+            <div className="db-empty">Loading…</div>
+          ) : reports.length === 0 ? (
+            <div className="db-empty">No reports yet.</div>
+          ) : (
+            <table className="db-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Total sales</th>
+                  <th>Status</th>
+                  <th></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {reports.slice(0, 5).map((r) => (
+                  <tr key={r._id}>
+                    <td data-label="Date">{new Date(r.date).toLocaleDateString()}</td>
+                    <td data-label="Total" className="db-num">{fmt(r.grandTotal)}</td>
+                    <td data-label="Status">
+                      <span className={`db-badge ${r.status}`}>{r.status.replace("_", " ")}</span>
+                    </td>
+                    <td data-label="">
+                      {r.status === "submitted" ? (
+                        <button className="db-btn db-btn-ghost" onClick={() => requestEdit(r._id)}>
+                          Request edit
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: 12.5, color: "var(--db-muted)" }}>Awaiting admin</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -122,11 +124,13 @@ const ManagerDashboard = () => {
         <div className="db-panel-head">
           <div>
             <h2>Transfer / delivery notes</h2>
-            <div className="sub">Products sent from {BRANCH} to other branches</div>
+            <div className="sub">Products sent from {user?.branch} to other branches</div>
           </div>
         </div>
         <div className="db-panel-body">
-          {transfers.length === 0 ? (
+          {loading ? (
+            <div className="db-empty">Loading…</div>
+          ) : transfers.length === 0 ? (
             <div className="db-empty">No transfer notes yet.</div>
           ) : (
             <table className="db-table">
@@ -139,11 +143,11 @@ const ManagerDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {transfers.map((t) => (
-                  <tr key={t.id}>
-                    <td data-label="Date">{t.date}</td>
-                    <td data-label="To">{t.to}</td>
-                    <td data-label="Items">{t.items}</td>
+                {transfers.slice(0, 5).map((t) => (
+                  <tr key={t._id}>
+                    <td data-label="Date">{new Date(t.date).toLocaleDateString()}</td>
+                    <td data-label="To">{t.toBranch?.name}</td>
+                    <td data-label="Items">{t.lines.length}</td>
                     <td data-label="Status">
                       <span className={`db-badge ${t.status}`}>{t.status}</span>
                     </td>
@@ -156,18 +160,13 @@ const ManagerDashboard = () => {
       </div>
 
       {openModal === "report" && (
-        <Modal title="New daily report" subtitle={`${BRANCH} branch`} onClose={() => setOpenModal(null)}>
-          <DailyReportForm onCancel={() => setOpenModal(null)} onSubmit={handleNewReport} />
+        <Modal title="New daily report" subtitle={user?.branch} onClose={() => setOpenModal(null)}>
+          <DailyReportForm defaultBranch={user?.branch} onCancel={() => setOpenModal(null)} onSubmit={handleNewReport} />
         </Modal>
       )}
       {openModal === "transfer" && (
         <Modal title="New transfer note" subtitle="Send products to another branch" onClose={() => setOpenModal(null)}>
-          <TransferNoteForm
-            branches={BRANCHES}
-            fromBranch={BRANCH}
-            onCancel={() => setOpenModal(null)}
-            onSubmit={handleNewTransfer}
-          />
+          <TransferNoteForm fromBranch={user?.branch} onCancel={() => setOpenModal(null)} onSubmit={handleNewTransfer} />
         </Modal>
       )}
     </div>

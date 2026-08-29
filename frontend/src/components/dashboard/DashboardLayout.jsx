@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import "./DashboardLayout.css";
 
 const ADMIN_NAV = [
@@ -21,6 +22,8 @@ const MANAGER_NAV = [
  * user: { name, branch }
  */
 const DashboardLayout = ({ role, user = { name: "User", branch: "Main" } }) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
   const nav = role === "admin" ? ADMIN_NAV : MANAGER_NAV;
   const initials = user.name
     .split(" ")
@@ -28,6 +31,11 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "Main" } }) => {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
 
   return (
     <div className="dashboard-app db-shell">
@@ -53,7 +61,7 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "Main" } }) => {
         </nav>
 
         <div className="db-sidebar-foot">
-          <button type="button" className="db-nav-link logout">
+          <button type="button" className="db-nav-link logout" onClick={handleLogout}>
             Log out
           </button>
         </div>

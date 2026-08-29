@@ -22,9 +22,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (payload) => {
-    const u = await authApi.register(payload);
-    setUser(u);
-    return u;
+    // public registration creates a pending manager account — no cookie is
+    // set, so we don't touch `user` here. The caller shows the pending message.
+    return authApi.register(payload);
   };
 
   const logout = async () => {

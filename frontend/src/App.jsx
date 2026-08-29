@@ -5,6 +5,11 @@ import Login from "./components/login.jsx";
 import DashboardLayout from "./components/dashboard/DashboardLayout.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import ManagerDashboard from "./pages/ManagerDashboard.jsx";
+import AdminSalesReports from "./pages/AdminSalesReports.jsx";
+import AdminManagers from "./pages/AdminManagers.jsx";
+import AdminTransfers from "./pages/AdminTransfers.jsx";
+import ManagerReports from "./pages/ManagerReports.jsx";
+import ManagerTransfers from "./pages/ManagerTransfers.jsx";
 
 const Placeholder = ({ title }) => (
   <div style={{ padding: 20 }}>
@@ -37,10 +42,10 @@ function App() {
             }
           >
             <Route index element={<AdminDashboard />} />
-            <Route path="sales-reports" element={<Placeholder title="Sales reports" />} />
-            <Route path="managers" element={<Placeholder title="Managers" />} />
+            <Route path="sales-reports" element={<AdminSalesReports />} />
+            <Route path="managers" element={<AdminManagers />} />
             <Route path="products" element={<Placeholder title="Products" />} />
-            <Route path="transfers" element={<Placeholder title="Transfer notes" />} />
+            <Route path="transfers" element={<AdminTransfers />} />
             <Route path="income-statement" element={<Placeholder title="Income statement" />} />
           </Route>
 
@@ -53,8 +58,8 @@ function App() {
             }
           >
             <Route index element={<ManagerDashboard />} />
-            <Route path="reports" element={<Placeholder title="Daily reports" />} />
-            <Route path="transfers" element={<Placeholder title="Transfer notes" />} />
+            <Route path="reports" element={<ManagerReports />} />
+            <Route path="transfers" element={<ManagerTransfers />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

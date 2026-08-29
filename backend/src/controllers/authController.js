@@ -2,10 +2,6 @@ import User from "../models/User.js";
 import Branch from "../models/Branch.js";
 import { sendTokenCookie } from "../utils/generateToken.js";
 
-// POST /api/auth/register
-// Public registration always creates a "manager" — admin accounts are
-// created via the seed script or by another admin (see userController.createManager),
-// so a stray public signup can never grant itself admin rights.
 export const register = async (req, res, next) => {
   try {
     const { name, email, password, branch } = req.body;
@@ -25,22 +21,19 @@ export const register = async (req, res, next) => {
       password,
       branch: branchDoc._id,
       role: "manager",
+      status: "pending",
     });
 
-    sendTokenCookie(res, user);
     res.status(201).json({
+      pending: true,
+      message: "Your account was created and is waiting for admin approval. You'll be able to log in once approved.",
       id: user._id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      branch: branchDoc.name,
     });
   } catch (err) {
     next(err);
   }
 };
 
-// POST /api/auth/login
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -58,6 +51,12 @@ export const login = async (req, res, next) => {
     if (!user.active) {
       return res.status(403).json({ message: "This account has been deactivated" });
     }
+    if (user.role === "manager" && user.status === "pending") {
+      return res.status(403).json({ message: "Your account is still waiting for admin approval" });
+    }
+    if (user.role === "manager" && user.status === "rejected") {
+      return res.status(403).json({ message: "Your registration request was not approved" });
+    }
 
     sendTokenCookie(res, user);
     res.json({
@@ -72,13 +71,11 @@ export const login = async (req, res, next) => {
   }
 };
 
-// POST /api/auth/logout
 export const logout = (req, res) => {
   res.clearCookie("token");
   res.json({ message: "Logged out" });
 };
 
-// GET /api/auth/me
 export const getMe = async (req, res) => {
   const u = req.user;
   res.json({

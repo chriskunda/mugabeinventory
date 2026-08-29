@@ -1,43 +1,68 @@
 import ExcelJS from "exceljs";
 import SalesReport from "../models/SalesReport.js";
+import Branch from "../models/Branch.js";
 
-// POST /api/reports  (manager or admin — both run a branch)
+const resolveOpeningStock = async (branchId, excludeReportId) => {
+  const filter = { branch: branchId };
+  if (excludeReportId) filter._id = { $ne: excludeReportId };
+  const last = await SalesReport.findOne(filter).sort({ date: -1, createdAt: -1 });
+  return last ? last.closingStock : 0;
+};
+
 export const createReport = async (req, res, next) => {
   try {
-    const { date, lines, notes } = req.body;
-    if (!date || !Array.isArray(lines) || lines.length === 0) {
-      return res.status(400).json({ message: "Date and at least one product line are required" });
+    const { date, branch, clients, transfers, otherSales, openingStock, notes } = req.body;
+    if (!date || !branch || !Array.isArray(clients) || clients.length === 0) {
+      return res.status(400).json({ message: "Date, branch and at least one client entry are required" });
     }
+
+    let branchDoc = await Branch.findOne({ name: branch.trim() });
+    if (!branchDoc) branchDoc = await Branch.create({ name: branch.trim() });
+
+    const opening =
+      openingStock !== undefined && openingStock !== null && openingStock !== ""
+        ? Number(openingStock)
+        : await resolveOpeningStock(branchDoc._id);
 
     const report = await SalesReport.create({
       manager: req.user._id,
-      branch: req.user.branch._id,
+      branch: branchDoc._id,
       date,
-      lines,
+      clients,
+      transfers: transfers || [],
+      otherSales: otherSales || [],
+      openingStock: opening,
       notes,
     });
 
-    res.status(201).json(report);
+    const populated = await report.populate([
+      { path: "manager", select: "name" },
+      { path: "branch", select: "name" },
+    ]);
+    res.status(201).json(populated);
   } catch (err) {
     next(err);
   }
 };
 
-// GET /api/reports/mine  (manager — their own reports)
 export const getMyReports = async (req, res, next) => {
   try {
-    const reports = await SalesReport.find({ manager: req.user._id }).sort({ date: -1 });
+    const reports = await SalesReport.find({ manager: req.user._id })
+      .populate("branch", "name")
+      .sort({ date: -1 });
     res.json(reports);
   } catch (err) {
     next(err);
   }
 };
 
-// GET /api/reports  (admin — all reports, optional ?managerId= & ?month=YYYY-MM filters)
 export const getAllReports = async (req, res, next) => {
   try {
     const filter = {};
-    if (req.query.managerId) filter.manager = req.query.managerId;
+    if (req.query.branch) {
+      const branchDoc = await Branch.findOne({ name: req.query.branch });
+      if (branchDoc) filter.branch = branchDoc._id;
+    }
     if (req.query.month) {
       const [y, m] = req.query.month.split("-").map(Number);
       filter.date = { $gte: new Date(y, m - 1, 1), $lt: new Date(y, m, 1) };
@@ -54,7 +79,23 @@ export const getAllReports = async (req, res, next) => {
   }
 };
 
-// PATCH /api/reports/:id/request-edit  (manager — asks admin for permission to edit)
+export const getReportById = async (req, res, next) => {
+  try {
+    const report = await SalesReport.findById(req.params.id)
+      .populate("manager", "name")
+      .populate("branch", "name");
+    if (!report) return res.status(404).json({ message: "Report not found" });
+
+    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Not your report" });
+    }
+
+    res.json(report);
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const requestEdit = async (req, res, next) => {
   try {
     const report = await SalesReport.findOne({ _id: req.params.id, manager: req.user._id });
@@ -73,8 +114,6 @@ export const requestEdit = async (req, res, next) => {
   }
 };
 
-// PATCH /api/reports/:id/resolve-edit  (admin — approve or reject an edit request)
-// body: { approve: boolean }
 export const resolveEditRequest = async (req, res, next) => {
   try {
     const report = await SalesReport.findById(req.params.id);
@@ -95,7 +134,6 @@ export const resolveEditRequest = async (req, res, next) => {
   }
 };
 
-// PUT /api/reports/:id  (manager — only allowed once status is "editable")
 export const updateReport = async (req, res, next) => {
   try {
     const report = await SalesReport.findOne({ _id: req.params.id, manager: req.user._id });
@@ -104,11 +142,14 @@ export const updateReport = async (req, res, next) => {
       return res.status(403).json({ message: "This report is locked. Request admin approval to edit it." });
     }
 
-    const { date, lines, notes } = req.body;
+    const { date, clients, transfers, otherSales, openingStock, notes } = req.body;
     if (date) report.date = date;
-    if (Array.isArray(lines) && lines.length) report.lines = lines;
+    if (Array.isArray(clients) && clients.length) report.clients = clients;
+    if (transfers) report.transfers = transfers;
+    if (otherSales) report.otherSales = otherSales;
+    if (openingStock !== undefined) report.openingStock = openingStock;
     if (notes !== undefined) report.notes = notes;
-    report.status = "submitted"; // re-lock once the correction is saved
+    report.status = "submitted";
     await report.save();
 
     res.json(report);
@@ -117,7 +158,6 @@ export const updateReport = async (req, res, next) => {
   }
 };
 
-// GET /api/reports/:id/export  (admin — download a single report as .xlsx)
 export const exportReportExcel = async (req, res, next) => {
   try {
     const report = await SalesReport.findById(req.params.id)
@@ -128,25 +168,50 @@ export const exportReportExcel = async (req, res, next) => {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Sales Report");
 
-    sheet.columns = [
-      { header: "Product", key: "product", width: 28 },
-      { header: "Qty", key: "qty", width: 10 },
-      { header: "Unit Price", key: "price", width: 14 },
-      { header: "Line Total", key: "lineTotal", width: 14 },
-    ];
-
     sheet.addRow([`Branch: ${report.branch?.name}`]);
-    sheet.addRow([`Manager: ${report.manager?.name}`]);
     sheet.addRow([`Date: ${report.date.toISOString().slice(0, 10)}`]);
+    sheet.addRow([`Manager: ${report.manager?.name}`]);
     sheet.addRow([]);
-    sheet.addRow(["Product", "Qty", "Unit Price", "Line Total"]).font = { bold: true };
+    sheet.addRow(["#", "Tire", "Size", "DOT", "Price", "Client", "Phone"]).font = { bold: true };
 
-    report.lines.forEach((l) => {
-      sheet.addRow([l.product, l.qty, l.price, l.qty * l.price]);
+    let rowNum = 1;
+    report.clients.forEach((c) => {
+      c.tires.forEach((t, i) => {
+        sheet.addRow([
+          i === 0 ? rowNum : "",
+          t.name,
+          t.size,
+          t.dot || "",
+          t.price,
+          i === 0 ? c.clientName : "",
+          i === 0 ? c.clientPhone || "" : "",
+        ]);
+      });
+      rowNum += 1;
     });
 
     sheet.addRow([]);
-    sheet.addRow(["", "", "Total", report.total]).font = { bold: true };
+    sheet.addRow([`Total (${report.totalTyres} tyres)`, "", "", "", report.tyresTotal]).font = { bold: true };
+    sheet.addRow(["Average", "", "", "", report.average]);
+
+    if (report.transfers.length) {
+      sheet.addRow([]);
+      sheet.addRow(["Transfers"]).font = { bold: true };
+      report.transfers.forEach((t) => sheet.addRow([t]));
+    }
+
+    if (report.otherSales.length) {
+      sheet.addRow([]);
+      sheet.addRow(["Other sales"]).font = { bold: true };
+      report.otherSales.forEach((o) => sheet.addRow([o.item, "", "", "", o.price]));
+      sheet.addRow(["Other sales total", "", "", "", report.otherSalesTotal]).font = { bold: true };
+    }
+
+    sheet.addRow([]);
+    sheet.addRow(["Grand total", "", "", "", report.grandTotal]).font = { bold: true };
+    sheet.addRow([`Current stock (was ${report.openingStock})`, "", "", "", report.closingStock]);
+    sheet.addRow([]);
+    sheet.addRow([`Done by ${report.manager?.name}`]);
 
     res.setHeader(
       "Content-Type",
@@ -154,7 +219,7 @@ export const exportReportExcel = async (req, res, next) => {
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="report-${report.date.toISOString().slice(0, 10)}.xlsx"`
+      `attachment; filename="report-${report.branch?.name}-${report.date.toISOString().slice(0, 10)}.xlsx"`
     );
 
     await workbook.xlsx.write(res);
@@ -164,10 +229,9 @@ export const exportReportExcel = async (req, res, next) => {
   }
 };
 
-// GET /api/reports/export-all  (admin — every report for a given month as one .xlsx)
 export const exportMonthExcel = async (req, res, next) => {
   try {
-    const { month } = req.query; // "YYYY-MM"
+    const { month } = req.query;
     const filter = {};
     if (month) {
       const [y, m] = month.split("-").map(Number);
@@ -186,8 +250,11 @@ export const exportMonthExcel = async (req, res, next) => {
       { header: "Date", key: "date", width: 14 },
       { header: "Branch", key: "branch", width: 16 },
       { header: "Manager", key: "manager", width: 20 },
+      { header: "Tyres sold", key: "tyres", width: 12 },
+      { header: "Tyres total", key: "tyresTotal", width: 14 },
+      { header: "Other sales", key: "other", width: 14 },
+      { header: "Grand total", key: "grand", width: 14 },
       { header: "Status", key: "status", width: 16 },
-      { header: "Total", key: "total", width: 14 },
     ];
     sheet.getRow(1).font = { bold: true };
 
@@ -196,8 +263,11 @@ export const exportMonthExcel = async (req, res, next) => {
         date: r.date.toISOString().slice(0, 10),
         branch: r.branch?.name,
         manager: r.manager?.name,
+        tyres: r.totalTyres,
+        tyresTotal: r.tyresTotal,
+        other: r.otherSalesTotal,
+        grand: r.grandTotal,
         status: r.status,
-        total: r.total,
       });
     });
 

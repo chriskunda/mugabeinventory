@@ -333,3 +333,63 @@
     text-transform: uppercase;
   }
 }
+
+/* ---- single report detail view (paper-format layout) ---- */
+.db-report-view {
+  font-size: 13.5px;
+}
+
+.db-report-title {
+  font-family: var(--db-font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.db-report-clients {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.db-report-clients li {
+  margin-bottom: 12px;
+}
+
+.db-report-tire {
+  font-family: var(--db-font-mono);
+  font-size: 12.5px;
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.db-report-client-name {
+  font-weight: 600;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.db-report-section-title {
+  font-weight: 700;
+  margin: 14px 0 6px;
+  font-size: 13px;
+}
+
+.db-report-plain-list {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+.db-report-plain-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.db-report-footer {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--db-line);
+  font-weight: 600;
+  font-style: italic;
+}

@@ -9,6 +9,14 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ["admin", "manager"], default: "manager" },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
     active: { type: Boolean, default: true },
+    // admins are always approved; managers start pending until an admin reviews them
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: function () {
+        return this.role === "admin" ? "approved" : "pending";
+      },
+    },
   },
   { timestamps: true }
 );

@@ -2,16 +2,14 @@ import User from "../models/User.js";
 import Branch from "../models/Branch.js";
 import SalesReport from "../models/SalesReport.js";
 
-// GET /api/users/managers  (admin only)
 export const getManagers = async (req, res, next) => {
   try {
-    const managers = await User.find({ role: "manager" }).populate("branch", "name");
+    const managers = await User.find({ role: "manager", status: "approved" }).populate("branch", "name");
 
-    // attach a light-weight summary per manager so the table doesn't need N extra requests
     const summaries = await Promise.all(
       managers.map(async (m) => {
         const reports = await SalesReport.find({ manager: m._id });
-        const totalSales = reports.reduce((s, r) => s + r.total, 0);
+        const totalSales = reports.reduce((s, r) => s + r.grandTotal, 0);
         const pendingEdit = reports.some((r) => r.status === "edit_requested");
         return {
           id: m._id,
@@ -31,7 +29,51 @@ export const getManagers = async (req, res, next) => {
   }
 };
 
-// POST /api/users/managers (admin only) — admin-created manager or admin account
+export const getPendingManagers = async (req, res, next) => {
+  try {
+    const pending = await User.find({ role: "manager", status: "pending" }).populate("branch", "name");
+    res.json(
+      pending.map((m) => ({
+        id: m._id,
+        name: m.name,
+        email: m.email,
+        branch: m.branch?.name,
+        requestedAt: m.createdAt,
+      }))
+    );
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const approveManager = async (req, res, next) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "manager", status: "pending" },
+      { status: "approved" },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "Pending manager not found" });
+    res.json({ message: `${user.name} approved` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const rejectManager = async (req, res, next) => {
+  try {
+    const user = await User.findOneAndUpdate(
+      { _id: req.params.id, role: "manager", status: "pending" },
+      { status: "rejected" },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "Pending manager not found" });
+    res.json({ message: `${user.name} rejected` });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const createManager = async (req, res, next) => {
   try {
     const { name, email, password, branch, role } = req.body;
@@ -48,6 +90,7 @@ export const createManager = async (req, res, next) => {
       password,
       branch: branchDoc._id,
       role: role === "admin" ? "admin" : "manager",
+      status: "approved",
     });
 
     res.status(201).json({ id: user._id, name: user.name, email: user.email, role: user.role });
