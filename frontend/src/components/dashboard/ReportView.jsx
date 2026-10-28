@@ -8,6 +8,7 @@ const ReportView = ({ report }) => {
       <div className="db-report-title">
         {report.branch?.name} — {new Date(report.date).toLocaleDateString()}
       </div>
+      <div>Sent: {new Date(report.sentAt).toLocaleString()}</div>
 
       <ol className="db-report-clients">
         {report.clients.map((c, i) => (

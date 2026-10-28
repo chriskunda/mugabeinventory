@@ -108,6 +108,82 @@
   border-radius: 999px;
 }
 
+.db-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.db-bell-wrap {
+  position: relative;
+}
+
+.db-bell {
+  position: relative;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 19px;
+  padding: 6px;
+}
+
+.db-bell-count {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--db-rust);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+}
+
+.db-bell-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 10;
+  width: min(360px, calc(100vw - 32px));
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--db-line);
+  border-radius: var(--db-radius-sm);
+  background: var(--db-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+}
+
+.db-note {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--db-line);
+  font-size: 13px;
+}
+
+.db-note strong {
+  display: block;
+}
+
+.db-note p {
+  margin: 4px 0 0;
+  color: var(--db-muted);
+  line-height: 1.4;
+}
+
+.db-empty,
+.db-note-error {
+  padding: 14px;
+  color: var(--db-muted);
+  font-size: 13px;
+}
+
+.db-note-error {
+  color: #a23b2a;
+}
+
 .db-user {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { transfersApi } from "../api/transfers";
+import { downloadTransferPdf } from "../api/reports";
 import Modal from "../components/dashboard/Modal";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
 
@@ -31,6 +32,18 @@ const ManagerTransfers = () => {
   const handleReceive = async (id) => {
     await transfersApi.markReceived(id);
     load();
+  };
+
+  const handleDownload = async (transfer) => {
+    try {
+      const date = new Date(transfer.date).toISOString().slice(0, 10);
+      await downloadTransferPdf(
+        transfer._id,
+        `transfer-${transfer.fromBranch?.name}-${transfer.toBranch?.name}-${date}.pdf`
+      );
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   return (
@@ -78,11 +91,16 @@ const ManagerTransfers = () => {
                       <span className={`db-badge ${t.status}`}>{t.status}</span>
                     </td>
                     <td data-label="">
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>
+                          PDF
+                        </button>
                       {t.status === "pending" && t.toBranch?.name === user?.branch && (
                         <button className="db-btn db-btn-ghost" onClick={() => handleReceive(t._id)}>
                           Mark received
                         </button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}

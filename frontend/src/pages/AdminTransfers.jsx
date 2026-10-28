@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
 import { transfersApi } from "../api/transfers";
+import { downloadTransferPdf } from "../api/reports";
 
 const AdminTransfers = () => {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const handleDownload = async (transfer) => {
+    try {
+      const date = new Date(transfer.date).toISOString().slice(0, 10);
+      await downloadTransferPdf(
+        transfer._id,
+        `transfer-${transfer.fromBranch?.name}-${transfer.toBranch?.name}-${date}.pdf`
+      );
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   useEffect(() => {
     transfersApi
@@ -41,6 +54,7 @@ const AdminTransfers = () => {
                   <th>Created by</th>
                   <th>Items</th>
                   <th>Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -53,6 +67,11 @@ const AdminTransfers = () => {
                     <td data-label="Items">{t.lines.length}</td>
                     <td data-label="Status">
                       <span className={`db-badge ${t.status}`}>{t.status}</span>
+                    </td>
+                    <td data-label="">
+                      <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>
+                        PDF
+                      </button>
                     </td>
                   </tr>
                 ))}

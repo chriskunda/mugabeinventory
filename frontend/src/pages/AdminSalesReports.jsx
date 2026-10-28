@@ -1,32 +1,69 @@
-import { useEffect, useState } from "react";
-import { reportsApi, downloadReportExcel } from "../api/reports";
+import { useCallback, useEffect, useState } from "react";
+import {
+  reportsApi,
+  downloadReportExcel,
+  downloadReportPdf,
+  downloadMonthExcel,
+} from "../api/reports";
 import Modal from "../components/dashboard/Modal";
 import ReportView from "../components/dashboard/ReportView";
+import { BRANCHES } from "../components/dashboard/DailyReportForm";
 
 const AdminSalesReports = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [viewing, setViewing] = useState(null);
+  const [branch, setBranch] = useState("");
+  const [month, setMonth] = useState("");
+
+  const fetchReports = useCallback(() => {
+    return reportsApi.all({ ...(branch && { branch }), ...(month && { month }) });
+  }, [branch, month]);
+
+  useEffect(() => {
+    fetchReports()
+      .then(setReports)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [fetchReports]);
 
   const load = () => {
     setLoading(true);
-    reportsApi
-      .all()
+    setError("");
+    fetchReports()
       .then(setReports)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
-
   const resolveEdit = async (id, approve) => {
-    await reportsApi.resolveEdit(id, approve);
-    load();
+    try {
+      await reportsApi.resolveEdit(id, approve);
+      load();
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
-  const handleDownload = (r) =>
-    downloadReportExcel(r._id, `report-${r.branch?.name}-${r.date.slice(0, 10)}.xlsx`);
+  const reportFilename = (report, extension) =>
+    `report-${report.branch?.name}-${new Date(report.date).toISOString().slice(0, 10)}.${extension}`;
+
+  const handleDownload = async (download, report, extension) => {
+    try {
+      await download(report._id, reportFilename(report, extension));
+    } catch (e) {
+      setError(e.message);
+    }
+  };
+
+  const handleMonthDownload = async () => {
+    try {
+      await downloadMonthExcel(month, `reports-${month}.xlsx`);
+    } catch (e) {
+      setError(e.message);
+    }
+  };
 
   return (
     <div>
@@ -35,6 +72,41 @@ const AdminSalesReports = () => {
           <h1>Sales reports</h1>
           <p>Every branch's daily reports, in one place.</p>
         </div>
+      </div>
+
+      <div className="db-toolbar">
+        {["", ...BRANCHES].map((b) => (
+          <button
+            key={b || "all"}
+            type="button"
+            className={`db-btn ${branch === b ? "db-btn-primary" : "db-btn-outline"}`}
+            onClick={() => {
+              if (branch !== b) {
+                setLoading(true);
+                setError("");
+              }
+              setBranch(b);
+            }}
+          >
+            {b || "All branches"}
+          </button>
+        ))}
+        <input
+          type="month"
+          value={month}
+          onChange={(e) => {
+            if (month !== e.target.value) {
+              setLoading(true);
+              setError("");
+            }
+            setMonth(e.target.value);
+          }}
+        />
+        {month && (
+          <button type="button" className="db-btn db-btn-outline" onClick={handleMonthDownload}>
+            Month Excel
+          </button>
+        )}
       </div>
 
       <div className="db-panel">
@@ -52,6 +124,7 @@ const AdminSalesReports = () => {
                   <th>Date</th>
                   <th>Branch</th>
                   <th>Manager</th>
+                  <th>Sent</th>
                   <th>Tyres</th>
                   <th>Grand total</th>
                   <th>Status</th>
@@ -64,6 +137,7 @@ const AdminSalesReports = () => {
                     <td data-label="Date">{new Date(r.date).toLocaleDateString()}</td>
                     <td data-label="Branch">{r.branch?.name}</td>
                     <td data-label="Manager">{r.manager?.name}</td>
+                    <td data-label="Sent">{new Date(r.sentAt).toLocaleString()}</td>
                     <td data-label="Tyres">{r.totalTyres}</td>
                     <td data-label="Total" className="db-num">{r.grandTotal.toLocaleString()}</td>
                     <td data-label="Status">
@@ -74,7 +148,18 @@ const AdminSalesReports = () => {
                         <button className="db-btn db-btn-ghost" onClick={() => setViewing(r)}>
                           View
                         </button>
-                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(r)}>
+                        <button
+                          type="button"
+                          className="db-btn db-btn-ghost"
+                          onClick={() => handleDownload(downloadReportPdf, r, "pdf")}
+                        >
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          className="db-btn db-btn-ghost"
+                          onClick={() => handleDownload(downloadReportExcel, r, "xlsx")}
+                        >
                           Excel
                         </button>
                         {r.status === "edit_requested" && (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -9,6 +9,8 @@ import {
   Tooltip,
 } from "recharts";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../api/client";
+import { financeApi } from "../api/admin";
 import { reportsApi } from "../api/reports";
 import { managersApi } from "../api/managers";
 import { transfersApi } from "../api/transfers";
@@ -18,20 +20,6 @@ import DailyReportForm from "../components/dashboard/DailyReportForm";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
 import "./AdminDashboard.css";
 
-// NOTE: the sales trend chart and income statement below are still
-// placeholder numbers — monthly/quarterly/yearly income statement views,
-// expenses, and goal tracking are coming in the next round. Everything
-// else on this page (reports, managers, edit requests) is live data.
-const SALES_TREND = [
-  { month: "Mar", sales: 8_200_000 },
-  { month: "Apr", sales: 9_100_000 },
-  { month: "May", sales: 8_750_000 },
-  { month: "Jun", sales: 10_400_000 },
-  { month: "Jul", sales: 9_800_000 },
-  { month: "Aug", sales: 11_650_000 },
-];
-const INCOME_STATEMENT = { revenue: 11_650_000, cogs: 6_430_000, expenses: 1_820_000 };
-
 const fmt = (n) => `${(n || 0).toLocaleString()} RWF`;
 
 const AdminDashboard = () => {
@@ -40,30 +28,51 @@ const AdminDashboard = () => {
   const [reports, setReports] = useState([]);
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [trend, setTrend] = useState([]);
+  const [stmt, setStmt] = useState(null);
+  const [overviewError, setOverviewError] = useState("");
+
+  useEffect(() => {
+    const month = new Date().toISOString().slice(0, 7);
+    api
+      .get("/dashboard/sales-trend?months=6")
+      .then(setTrend)
+      .catch((err) => setOverviewError(err.message));
+    financeApi
+      .incomeStatement("month", month)
+      .then(setStmt)
+      .catch((err) => setOverviewError(err.message));
+  }, []);
 
   const load = () => {
     setLoading(true);
     Promise.all([reportsApi.all(), managersApi.list()])
-      .then(([r, m]) => {
-        setReports(r);
-        setManagers(m);
+      .then(([reports, managers]) => {
+        setReports(reports);
+        setManagers(managers);
       })
+      .catch((err) => setOverviewError(err.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    Promise.all([reportsApi.all(), managersApi.list()])
+      .then(([reports, managers]) => {
+        setReports(reports);
+        setManagers(managers);
+      })
+      .catch((err) => setOverviewError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const pendingEditRequests = reports.filter((r) => r.status === "edit_requested");
 
-  const net = useMemo(
-    () => INCOME_STATEMENT.revenue - INCOME_STATEMENT.cogs - INCOME_STATEMENT.expenses,
-    []
-  );
+  const net = stmt?.net ?? 0;
   const isProfit = net >= 0;
 
-  const lastMonth = SALES_TREND[SALES_TREND.length - 1].sales;
-  const prevMonth = SALES_TREND[SALES_TREND.length - 2].sales;
-  const delta = (((lastMonth - prevMonth) / prevMonth) * 100).toFixed(1);
+  const lastMonth = trend.at(-1)?.sales ?? 0;
+  const prevMonth = trend.at(-2)?.sales ?? 0;
+  const delta = prevMonth ? (((lastMonth - prevMonth) / prevMonth) * 100).toFixed(1) : "0.0";
 
   const resolveRequest = async (id, approve) => {
     await reportsApi.resolveEdit(id, approve);
@@ -98,10 +107,12 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {overviewError && <div className="db-empty">{overviewError}</div>}
+
       <div className="db-stat-grid">
         <StatCard
           label="Sales this month"
-          value={fmt(lastMonth)}
+          value={fmt(stmt?.netSales)}
           trend={{ direction: delta >= 0 ? "up" : "down", value: `${Math.abs(delta)}%`, label: "vs last month" }}
         />
         <StatCard
@@ -122,13 +133,13 @@ const AdminDashboard = () => {
           <div className="db-panel-head">
             <div>
               <h2>Sales trend</h2>
-              <div className="sub">Last 6 months, all branches combined (placeholder — live in round 2)</div>
+              <div className="sub">Last 6 months, all branches combined</div>
             </div>
           </div>
           <div className="db-panel-body">
             <div style={{ height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={SALES_TREND} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
+                <LineChart data={trend} margin={{ top: 10, right: 12, left: -12, bottom: 0 }}>
                   <CartesianGrid stroke="#E8E1D8" vertical={false} />
                   <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#96959E" }} axisLine={false} tickLine={false} />
                   <YAxis
@@ -149,21 +160,17 @@ const AdminDashboard = () => {
           <div className="db-panel-head">
             <div>
               <h2>Income statement</h2>
-              <div className="sub">Placeholder — monthly/quarterly/yearly view coming in round 2</div>
+              <div className="sub">{new Date().toLocaleString("en", { month: "long", year: "numeric" })}</div>
             </div>
           </div>
           <div className="db-panel-body">
             <div className="db-ledger-row">
-              <span>Revenue</span>
-              <span className="db-num">{fmt(INCOME_STATEMENT.revenue)}</span>
-            </div>
-            <div className="db-ledger-row">
-              <span>Cost of goods sold</span>
-              <span className="db-num">-{fmt(INCOME_STATEMENT.cogs)}</span>
+              <span>Net sales</span>
+              <span className="db-num">{fmt(stmt?.netSales)}</span>
             </div>
             <div className="db-ledger-row">
               <span>Operating expenses</span>
-              <span className="db-num">-{fmt(INCOME_STATEMENT.expenses)}</span>
+              <span className="db-num">-{fmt(stmt?.totalExpenses)}</span>
             </div>
             <div className="db-ledger-row total">
               <span>{isProfit ? "Net profit" : "Net loss"}</span>

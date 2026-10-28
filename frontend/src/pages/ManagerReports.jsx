@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { reportsApi } from "../api/reports";
+import { reportsApi, downloadReportPdf } from "../api/reports";
 import Modal from "../components/dashboard/Modal";
 import DailyReportForm from "../components/dashboard/DailyReportForm";
 import ReportView from "../components/dashboard/ReportView";
@@ -33,6 +33,15 @@ const ManagerReports = () => {
     const reason = window.prompt("What needs to change on this report?") || "";
     await reportsApi.requestEdit(id, reason);
     load();
+  };
+
+  const handleDownload = async (report) => {
+    try {
+      const date = new Date(report.date).toISOString().slice(0, 10);
+      await downloadReportPdf(report._id, `report-${report.branch?.name}-${date}.pdf`);
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   return (
@@ -83,6 +92,9 @@ const ManagerReports = () => {
                       <div style={{ display: "flex", gap: 8 }}>
                         <button className="db-btn db-btn-ghost" onClick={() => setModal({ view: r })}>
                           View
+                        </button>
+                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(r)}>
+                          PDF
                         </button>
                         {r.status === "submitted" && (
                           <button className="db-btn db-btn-ghost" onClick={() => requestEdit(r._id)}>
