@@ -1,6 +1,6 @@
 import User from "../models/User.js";
-import Branch from "../models/Branch.js";
 import SalesReport from "../models/SalesReport.js";
+import { findOrCreateBranch } from "../utils/branches.js";
 
 export const getManagers = async (req, res, next) => {
   try {
@@ -81,8 +81,7 @@ export const createManager = async (req, res, next) => {
       return res.status(400).json({ message: "Name, email, password and branch are required" });
     }
 
-    let branchDoc = await Branch.findOne({ name: branch.trim() });
-    if (!branchDoc) branchDoc = await Branch.create({ name: branch.trim() });
+    const branchDoc = await findOrCreateBranch(branch);
 
     const user = await User.create({
       name,
