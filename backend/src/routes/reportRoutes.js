@@ -8,6 +8,7 @@ import {
   resolveEditRequest,
   updateReport,
   exportReportExcel,
+  exportReportPdf,
   exportMonthExcel,
 } from "../controllers/reportController.js";
 import { protect, restrictTo } from "../middleware/auth.js";
@@ -25,6 +26,7 @@ router.get("/:id", getReportById);
 router.patch("/:id/request-edit", requestEdit);
 router.patch("/:id/resolve-edit", restrictTo("admin"), resolveEditRequest);
 router.put("/:id", updateReport);
-router.get("/:id/export", restrictTo("admin"), exportReportExcel);
+router.get("/:id/pdf", exportReportPdf);
+router.get("/:id/export", exportReportExcel);
 
 export default router;

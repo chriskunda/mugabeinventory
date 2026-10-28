@@ -1,12 +1,24 @@
 import ExcelJS from "exceljs";
 import SalesReport from "../models/SalesReport.js";
-import Branch from "../models/Branch.js";
+import Return from "../models/Return.js";
+import { findOrCreateBranch } from "../utils/branches.js";
+import { startPdf, line, row, fmt } from "../utils/pdf.js";
 
 const resolveOpeningStock = async (branchId, excludeReportId) => {
   const filter = { branch: branchId };
   if (excludeReportId) filter._id = { $ne: excludeReportId };
   const last = await SalesReport.findOne(filter).sort({ date: -1, createdAt: -1 });
-  return last ? last.closingStock : 0;
+  const restocked = await Return.aggregate([
+    {
+      $match: {
+        branch: branchId,
+        condition: "good",
+        createdAt: { $gt: last ? last.createdAt : new Date(0) },
+      },
+    },
+    { $group: { _id: null, qty: { $sum: "$quantity" } } },
+  ]);
+  return (last ? last.closingStock : 0) + (restocked[0]?.qty || 0);
 };
 
 export const createReport = async (req, res, next) => {
@@ -16,8 +28,7 @@ export const createReport = async (req, res, next) => {
       return res.status(400).json({ message: "Date, branch and at least one client entry are required" });
     }
 
-    let branchDoc = await Branch.findOne({ name: branch.trim() });
-    if (!branchDoc) branchDoc = await Branch.create({ name: branch.trim() });
+    const branchDoc = await findOrCreateBranch(branch);
 
     const opening =
       openingStock !== undefined && openingStock !== null && openingStock !== ""
@@ -164,6 +175,9 @@ export const exportReportExcel = async (req, res, next) => {
       .populate("manager", "name")
       .populate("branch", "name");
     if (!report) return res.status(404).json({ message: "Report not found" });
+    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Not your report" });
+    }
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Sales Report");
@@ -224,6 +238,60 @@ export const exportReportExcel = async (req, res, next) => {
 
     await workbook.xlsx.write(res);
     res.end();
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const exportReportPdf = async (req, res, next) => {
+  try {
+    const report = await SalesReport.findById(req.params.id)
+      .populate("manager", "name")
+      .populate("branch", "name");
+    if (!report) return res.status(404).json({ message: "Report not found" });
+    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+      return res.status(403).json({ message: "Not your report" });
+    }
+
+    const date = report.date.toISOString().slice(0, 10);
+    const doc = startPdf(res, `report-${report.branch?.name}-${date}.pdf`);
+
+    line(doc, `${report.branch?.name} — ${date}`, { bold: true, size: 15 });
+    line(doc, `Sent: ${report.sentAt.toLocaleString()}`, { size: 9 });
+    doc.moveDown();
+
+    report.clients.forEach((c, i) => {
+      c.tires.forEach((t, ti) =>
+        line(
+          doc,
+          `${ti === 0 ? `${i + 1}. ` : "    "}${t.name}  ${t.size}  DOT ${t.dot || "-"}  —  ${fmt(t.price)}`
+        )
+      );
+      line(doc, `    ${c.clientName}${c.clientPhone ? `  ${c.clientPhone}` : ""}`, { bold: true });
+      doc.moveDown(0.5);
+    });
+
+    row(doc, `Total (${report.totalTyres} tyres)`, fmt(report.tyresTotal), { bold: true });
+    row(doc, "Average", fmt(report.average));
+
+    if (report.transfers.length) {
+      doc.moveDown(0.5);
+      line(doc, "Transfer", { bold: true });
+      report.transfers.forEach((t) => line(doc, `  ${t}`));
+    }
+    if (report.otherSales.length) {
+      doc.moveDown(0.5);
+      line(doc, "Other sales", { bold: true });
+      report.otherSales.forEach((o) => row(doc, `  ${o.item}`, fmt(o.price)));
+      row(doc, "Other sales total", fmt(report.otherSalesTotal), { bold: true });
+    }
+
+    doc.moveDown(0.5);
+    row(doc, "Grand total", fmt(report.grandTotal), { bold: true });
+    row(doc, `Current stock (was ${report.openingStock})`, fmt(report.closingStock));
+    doc.moveDown();
+    line(doc, `Done by ${report.manager?.name}`, { bold: true });
+    doc.end();
   } catch (err) {
     next(err);
   }

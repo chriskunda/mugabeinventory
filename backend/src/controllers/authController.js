@@ -1,5 +1,6 @@
 import User from "../models/User.js";
-import Branch from "../models/Branch.js";
+import Notification from "../models/Notification.js";
+import { findOrCreateBranch } from "../utils/branches.js";
 import { sendTokenCookie } from "../utils/generateToken.js";
 
 export const register = async (req, res, next) => {
@@ -9,8 +10,7 @@ export const register = async (req, res, next) => {
       return res.status(400).json({ message: "Name, email, password and branch are required" });
     }
 
-    let branchDoc = await Branch.findOne({ name: branch.trim() });
-    if (!branchDoc) branchDoc = await Branch.create({ name: branch.trim() });
+    const branchDoc = await findOrCreateBranch(branch);
 
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) return res.status(409).json({ message: "An account with that email already exists" });
@@ -23,6 +23,15 @@ export const register = async (req, res, next) => {
       role: "manager",
       status: "pending",
     });
+
+    const admins = await User.find({ role: "admin" }).select("_id");
+    await Notification.insertMany(
+      admins.map((admin) => ({
+        user: admin._id,
+        title: "New manager request",
+        message: `${name} (${branchDoc.name}) is waiting for approval.`,
+      }))
+    );
 
     res.status(201).json({
       pending: true,
@@ -72,7 +81,8 @@ export const login = async (req, res, next) => {
 };
 
 export const logout = (req, res) => {
-  res.clearCookie("token");
+  const prod = process.env.NODE_ENV === "production";
+  res.clearCookie("token", { httpOnly: true, secure: prod, sameSite: prod ? "none" : "lax" });
   res.json({ message: "Logged out" });
 };
 
