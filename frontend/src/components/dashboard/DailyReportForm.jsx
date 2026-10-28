@@ -8,13 +8,15 @@ const newOtherSale = () => ({ id: `o${uid++}`, item: "", price: "" });
 const BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
 
 const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
-  const [branch, setBranch] = useState(defaultBranch || BRANCHES[0]);
+  const [branch, setBranch] = useState(BRANCHES.includes(defaultBranch) ? defaultBranch : BRANCHES[0]);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [openingStock, setOpeningStock] = useState("");
   const [clients, setClients] = useState([newClient()]);
   const [transfers, setTransfers] = useState([""]);
   const [otherSales, setOtherSales] = useState([]);
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const updateClient = (id, field, value) =>
     setClients((prev) => prev.map((c) => (c.id === id ? { ...c, [field]: value } : c)));
@@ -62,21 +64,29 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
   const grandTotal = tyresTotal + otherSalesTotal;
   const average = totalTyres > 0 ? Math.round((tyresTotal / totalTyres) * 100) / 100 : 0;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit?.({
-      branch,
-      date,
-      openingStock: openingStock === "" ? undefined : Number(openingStock),
-      clients: clients.map((c) => ({
-        clientName: c.clientName,
-        clientPhone: c.clientPhone,
-        tires: c.tires.map((t) => ({ name: t.name, size: t.size, dot: t.dot, price: Number(t.price) })),
-      })),
-      transfers: transfers.filter((t) => t.trim()),
-      otherSales: otherSales.map((o) => ({ item: o.item, price: Number(o.price) })),
-      notes,
-    });
+    setError("");
+    setSaving(true);
+    try {
+      await onSubmit?.({
+        branch,
+        date,
+        openingStock: openingStock === "" ? undefined : Number(openingStock),
+        clients: clients.map((c) => ({
+          clientName: c.clientName,
+          clientPhone: c.clientPhone,
+          tires: c.tires.map((t) => ({ name: t.name, size: t.size, dot: t.dot, price: Number(t.price) })),
+        })),
+        transfers: transfers.filter((t) => t.trim()),
+        otherSales: otherSales.map((o) => ({ item: o.item, price: Number(o.price) })),
+        notes,
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -261,12 +271,13 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
         </div>
       </div>
 
+      {error && <p style={{ color: "#a23b2a", fontSize: 13 }}>{error}</p>}
       <div className="db-modal-foot">
         <button type="button" className="db-btn db-btn-outline" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="db-btn db-btn-primary">
-          Submit report
+        <button type="submit" className="db-btn db-btn-primary" disabled={saving}>
+          {saving ? "Submitting…" : "Submit report"}
         </button>
       </div>
     </form>

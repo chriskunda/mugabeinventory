@@ -10,9 +10,16 @@ const newLine = () => ({ id: `t${uid++}`, product: "", qty: 1 });
  * onSubmit receives the assembled transfer note payload.
  */
 const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, onCancel }) => {
-  const [toBranch, setToBranch] = useState(branches.find((b) => b !== fromBranch) || "");
+  const [selectedFromBranch, setSelectedFromBranch] = useState(
+    branches.includes(fromBranch) ? fromBranch : branches[0] || ""
+  );
+  const [toBranch, setToBranch] = useState(
+    branches.find((b) => b !== (branches.includes(fromBranch) ? fromBranch : branches[0])) || ""
+  );
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [lines, setLines] = useState([newLine()]);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const updateLine = (id, field, value) =>
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
@@ -20,9 +27,17 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
   const removeLine = (id) =>
     setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit?.({ date, fromBranch, toBranch, lines, status: "pending" });
+    setError("");
+    setSaving(true);
+    try {
+      await onSubmit?.({ date, fromBranch: selectedFromBranch, toBranch, lines, status: "pending" });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -30,7 +45,27 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
       <div className="db-field-row">
         <div className="db-field">
           <label>From branch</label>
-          <input value={fromBranch} disabled />
+          {branches.includes(fromBranch) ? (
+            <input value={fromBranch} disabled />
+          ) : (
+            <select
+              value={selectedFromBranch}
+              onChange={(e) => {
+                const nextFromBranch = e.target.value;
+                setSelectedFromBranch(nextFromBranch);
+                if (toBranch === nextFromBranch) {
+                  setToBranch(branches.find((b) => b !== nextFromBranch) || "");
+                }
+              }}
+              required
+            >
+              {branches.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="db-field">
           <label>To branch</label>
@@ -39,7 +74,7 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
               Select branch
             </option>
             {branches
-              .filter((b) => b !== fromBranch)
+              .filter((b) => b !== selectedFromBranch)
               .map((b) => (
                 <option key={b} value={b}>
                   {b}
@@ -89,12 +124,13 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
         </div>
       </div>
 
+      {error && <p style={{ color: "#a23b2a", fontSize: 13 }}>{error}</p>}
       <div className="db-modal-foot">
         <button type="button" className="db-btn db-btn-outline" onClick={onCancel}>
           Cancel
         </button>
-        <button type="submit" className="db-btn db-btn-primary">
-          Create delivery note
+        <button type="submit" className="db-btn db-btn-primary" disabled={saving}>
+          {saving ? "Submitting…" : "Create delivery note"}
         </button>
       </div>
     </form>

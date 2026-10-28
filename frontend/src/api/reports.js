@@ -13,7 +13,7 @@ export const reportsApi = {
   update: (id, payload) => api.put(`/reports/${id}`, payload),
 };
 
-const downloadFile = async (path, filename) => {
+export const downloadFile = async (path, filename) => {
   const res = await fetch(`${API_BASE_URL}${path}`, { credentials: "include" });
   if (!res.ok) {
     const data = await res.json().catch(() => null);
@@ -33,5 +33,11 @@ const downloadFile = async (path, filename) => {
 export const downloadReportExcel = (id, filename = "report.xlsx") =>
   downloadFile(`/reports/${id}/export`, filename);
 
+export const downloadReportPdf = (id, filename = "report.pdf") =>
+  downloadFile(`/reports/${id}/pdf`, filename);
+
 export const downloadMonthExcel = (month, filename = "reports.xlsx") =>
   downloadFile(`/reports/export-all?month=${month}`, filename);
+
+export const downloadTransferPdf = (id, filename = "transfer.pdf") => 
+  downloadFile(`/transfers/${id}/pdf`, filename);
