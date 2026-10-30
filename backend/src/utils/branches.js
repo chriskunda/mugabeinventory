@@ -1,15 +1,17 @@
 import Branch from "../models/Branch.js";
 
-export const ALLOWED_BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
+export const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-export const findOrCreateBranch = async (name) => {
-  const canonical = ALLOWED_BRANCHES.find(
-    (branch) => branch.toLowerCase() === String(name || "").trim().toLowerCase()
-  );
-  if (!canonical) {
-    const error = new Error(`Unknown branch "${name}"`);
-    error.statusCode = 400;
-    throw error;
+export const findBranch = async (name) => {
+  const clean = String(name || "").trim();
+  const branch = clean && (await Branch.findOne({ name: new RegExp(`^${escapeRegex(clean)}$`, "i") }));
+  if (!branch) {
+    const e = new Error(`Unknown branch "${clean}"`);
+    e.statusCode = 400;
+    throw e;
   }
-  return (await Branch.findOne({ name: canonical })) || Branch.create({ name: canonical });
+  return branch;
 };
+
+// Old name kept so existing imports keep working. It no longer creates branches.
+export const findOrCreateBranch = findBranch;

@@ -1,6 +1,6 @@
 import Return from "../models/Return.js";
 import Branch from "../models/Branch.js";
-import { ALLOWED_BRANCHES, findOrCreateBranch } from "../utils/branches.js";
+import { findOrCreateBranch } from "../utils/branches.js";
 import { getRange } from "../utils/period.js";
 
 export const createReturn = async (req, res, next) => {
@@ -53,7 +53,7 @@ export const getReturnsSummary = async (req, res, next) => {
       { $match: { date: { $gte: start, $lt: end } } },
       { $group: { _id: { branch: "$branch", condition: "$condition" }, qty: { $sum: "$quantity" }, refunds: { $sum: "$refundAmount" } } },
     ]);
-    const branches = await Branch.find({ name: { $in: ALLOWED_BRANCHES } });
+    const branches = await Branch.find().sort({ createdAt: 1 });
     res.json(
       branches.map((b) => {
         const mine = rows.filter((r) => String(r._id.branch) === String(b._id));

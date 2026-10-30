@@ -1,13 +1,10 @@
 import Product from "../models/Product.js";
-import { ALLOWED_BRANCHES, findOrCreateBranch } from "../utils/branches.js";
+import Branch from "../models/Branch.js";
+import { findOrCreateBranch } from "../utils/branches.js";
 
 const DEFAULT_PRODUCTS = ["Used tyres", "New tyres", "Perfumes", "Other accessories"];
 
-const loadBranches = async () => {
-  const list = [];
-  for (const name of ALLOWED_BRANCHES) list.push(await findOrCreateBranch(name));
-  return list;
-};
+const loadBranches = () => Branch.find().sort({ createdAt: 1 });
 
 const shape = (p, branches) => {
   const stocks = branches.map((b) => ({

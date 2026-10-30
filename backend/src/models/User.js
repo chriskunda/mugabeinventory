@@ -7,6 +7,10 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ["admin", "manager"], default: "manager" },
+    daysOff: { type: [Number], default: [] }, // 0 = Sunday ... 6 = Saturday
+    photo: { type: String, default: "" },
+    pendingPassword: { type: String, select: false }, // hashed, waits for admin approval
+    passwordRequestedAt: Date,
     branch: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",

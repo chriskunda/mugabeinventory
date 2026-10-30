@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { offDayBlocked } from "../utils/access.js";
 
 export const protect = async (req, res, next) => {
   try {
@@ -13,6 +14,10 @@ export const protect = async (req, res, next) => {
 
     if (!user || !user.active) {
       return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (await offDayBlocked(user)) {
+      return res.status(403).json({ message: "Today is your day off. Ask the admin to approve your access.", code: "DAY_OFF" });
     }
 
     req.user = user;

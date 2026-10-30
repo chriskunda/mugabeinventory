@@ -1,8 +1,15 @@
 import ExcelJS from "exceljs";
 import SalesReport from "../models/SalesReport.js";
 import Return from "../models/Return.js";
-import { findOrCreateBranch } from "../utils/branches.js";
+import { findOrCreateBranch, escapeRegex } from "../utils/branches.js";
+import AccessRequest from "../models/AccessRequest.js";
+import Branch from "../models/Branch.js";
 import { startPdf, line, row, fmt } from "../utils/pdf.js";
+
+const canView = (user, report) =>
+  user.role === "admin" ||
+  String(report.manager?._id ?? report.manager) === String(user._id) ||
+  String(report.branch?._id ?? report.branch) === String(user.branch?._id);
 
 const resolveOpeningStock = async (branchId, excludeReportId) => {
   const filter = { branch: branchId };
@@ -29,6 +36,16 @@ export const createReport = async (req, res, next) => {
     }
 
     const branchDoc = await findOrCreateBranch(branch);
+
+    if (req.user.role === "manager" && String(branchDoc._id) !== String(req.user.branch._id)) {
+      const approved = await AccessRequest.exists({
+        manager: req.user._id, kind: "branch", branch: branchDoc._id,
+        date: String(date).slice(0, 10), status: "approved",
+      });
+      if (!approved) {
+        return res.status(403).json({ message: `The admin hasn't approved you to report for ${branchDoc.name} on that day` });
+      }
+    }
 
     const opening =
       openingStock !== undefined && openingStock !== null && openingStock !== ""
@@ -58,10 +75,55 @@ export const createReport = async (req, res, next) => {
 
 export const getMyReports = async (req, res, next) => {
   try {
-    const reports = await SalesReport.find({ manager: req.user._id })
+    const reports = await SalesReport.find({
+      $or: [{ branch: req.user.branch._id }, { manager: req.user._id }],
+    })
       .populate("branch", "name")
+      .populate("manager", "name")
       .sort({ date: -1 });
     res.json(reports);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/reports/search?product=&client=&branch= (product is required)
+export const searchSales = async (req, res, next) => {
+  try {
+    const product = String(req.query.product || "").trim();
+    const client = String(req.query.client || "").trim();
+    if (product.length < 2) return res.status(400).json({ message: "Enter the product to search for first" });
+
+    const match = {};
+    if (req.user.role !== "admin") match.branch = req.user.branch._id;
+    else if (req.query.branch) match.branch = (await findOrCreateBranch(req.query.branch))._id;
+
+    const p = new RegExp(escapeRegex(product), "i");
+    const and = [{ $or: [{ "clients.tires.name": p }, { "clients.tires.size": p }] }];
+    if (client) {
+      const c = new RegExp(escapeRegex(client), "i");
+      and.push({ $or: [{ "clients.clientName": c }, { "clients.clientPhone": c }] });
+    }
+
+    const rows = await SalesReport.aggregate([
+      { $match: match },
+      { $unwind: "$clients" },
+      { $unwind: "$clients.tires" },
+      { $match: { $and: and } },
+      { $sort: { date: -1 } },
+      { $limit: 200 },
+      { $lookup: { from: "branches", localField: "branch", foreignField: "_id", as: "b" } },
+      {
+        $project: {
+          _id: 0, reportId: "$_id", date: 1,
+          branch: { $arrayElemAt: ["$b.name", 0] },
+          clientName: "$clients.clientName", clientPhone: "$clients.clientPhone",
+          product: "$clients.tires.name", size: "$clients.tires.size",
+          dot: "$clients.tires.dot", price: "$clients.tires.price",
+        },
+      },
+    ]);
+    res.json(rows);
   } catch (err) {
     next(err);
   }
@@ -97,7 +159,7 @@ export const getReportById = async (req, res, next) => {
       .populate("branch", "name");
     if (!report) return res.status(404).json({ message: "Report not found" });
 
-    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+    if (!canView(req.user, report)) {
       return res.status(403).json({ message: "Not your report" });
     }
 
@@ -175,7 +237,7 @@ export const exportReportExcel = async (req, res, next) => {
       .populate("manager", "name")
       .populate("branch", "name");
     if (!report) return res.status(404).json({ message: "Report not found" });
-    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+    if (!canView(req.user, report)) {
       return res.status(403).json({ message: "Not your report" });
     }
 
@@ -249,7 +311,7 @@ export const exportReportPdf = async (req, res, next) => {
       .populate("manager", "name")
       .populate("branch", "name");
     if (!report) return res.status(404).json({ message: "Report not found" });
-    if (req.user.role !== "admin" && String(report.manager._id) !== String(req.user._id)) {
+    if (!canView(req.user, report)) {
       return res.status(403).json({ message: "Not your report" });
     }
 

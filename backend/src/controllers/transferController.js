@@ -1,5 +1,7 @@
 import TransferNote from "../models/TransferNote.js";
 import { findOrCreateBranch } from "../utils/branches.js";
+import AccessRequest from "../models/AccessRequest.js";
+import { todayKigali } from "../utils/access.js";
 import { startPdf } from "../utils/pdf.js";
 
 const TZ = "Africa/Kigali";
@@ -14,7 +16,8 @@ const canSee = (user, note) =>
   user.role === "admin" ||
   [note.fromBranch._id ?? note.fromBranch, note.toBranch._id ?? note.toBranch].some(
     (id) => String(id) === String(user.branch?._id)
-  );
+  ) ||
+  String(note.createdBy?._id ?? note.createdBy) === String(user._id);
 
 export const createTransfer = async (req, res, next) => {
   try {
@@ -31,6 +34,15 @@ export const createTransfer = async (req, res, next) => {
     if (req.user.role === "admin") {
       if (!fromBranch) return res.status(400).json({ message: "Choose the sending branch" });
       fromId = (await findOrCreateBranch(fromBranch))._id;
+    } else if (fromBranch) {
+      const f = await findOrCreateBranch(fromBranch);
+      if (String(f._id) !== String(fromId)) {
+        const ok = await AccessRequest.exists({
+          manager: req.user._id, kind: "branch", branch: f._id, date: todayKigali(), status: "approved",
+        });
+        if (!ok) return res.status(403).json({ message: `The admin hasn't approved you to work at ${f.name} today` });
+        fromId = f._id;
+      }
     }
     if (String(fromId) === String(toDoc._id)) {
       return res.status(400).json({ message: "Source and destination branch must be different" });
@@ -53,7 +65,7 @@ export const getTransfers = async (req, res, next) => {
     const filter =
       req.user.role === "admin"
         ? {}
-        : { $or: [{ fromBranch: req.user.branch._id }, { toBranch: req.user.branch._id }] };
+        : { $or: [{ fromBranch: req.user.branch._id }, { toBranch: req.user.branch._id }, { createdBy: req.user._id }] };
     const transfers = await TransferNote.find(filter)
       .populate("fromBranch", "name").populate("toBranch", "name").populate("createdBy", "name")
       .sort({ createdAt: -1 });

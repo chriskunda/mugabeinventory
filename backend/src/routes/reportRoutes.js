@@ -10,6 +10,7 @@ import {
   exportReportExcel,
   exportReportPdf,
   exportMonthExcel,
+  searchSales,
 } from "../controllers/reportController.js";
 import { protect, restrictTo } from "../middleware/auth.js";
 
@@ -18,6 +19,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get("/mine", getMyReports);
+router.get("/search", searchSales);
 router.get("/export-all", restrictTo("admin"), exportMonthExcel);
 router.get("/", restrictTo("admin"), getAllReports);
 

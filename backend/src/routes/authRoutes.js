@@ -8,5 +8,8 @@ router.post("/register", register);
 router.post("/login", login);
 router.post("/logout", logout);
 router.get("/me", protect, getMe);
+router.post("/forgot-password", forgotPassword);
+router.post("/request-day-access", requestDayAccess);
+router.patch("/me/photo", protect, setPhoto);
 
 export default router;
