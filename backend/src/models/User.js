@@ -7,7 +7,11 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, minlength: 6, select: false },
     role: { type: String, enum: ["admin", "manager"], default: "manager" },
-    branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
+    branch: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Branch",
+      required: function () { return this.role !== "admin"; },
+    },
     active: { type: Boolean, default: true },
     // admins are always approved; managers start pending until an admin reviews them
     status: {

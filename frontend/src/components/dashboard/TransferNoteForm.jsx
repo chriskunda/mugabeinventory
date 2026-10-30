@@ -1,38 +1,41 @@
 import { useState } from "react";
+import Select from "../ui/Select";
 
-const DEFAULT_BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
+const BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
 
 let uid = 0;
-const newLine = () => ({ id: `t${uid++}`, product: "", qty: 1 });
+const newLine = () => ({ id: `t${uid++}`, size: "", qty: 1 });
 
-/**
- * branches: string[] of branch names to populate the "to" dropdown.
- * onSubmit receives the assembled transfer note payload.
- */
-const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, onCancel }) => {
-  const [selectedFromBranch, setSelectedFromBranch] = useState(
-    branches.includes(fromBranch) ? fromBranch : branches[0] || ""
-  );
-  const [toBranch, setToBranch] = useState(
-    branches.find((b) => b !== (branches.includes(fromBranch) ? fromBranch : branches[0])) || ""
-  );
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+const TransferNoteForm = ({ fromBranch, onSubmit, onCancel }) => {
+  const [from, setFrom] = useState(BRANCHES[0]);
+  const sender = fromBranch || from;
+  const [toBranch, setToBranch] = useState("");
   const [lines, setLines] = useState([newLine()]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const updateLine = (id, field, value) =>
-    setLines((prev) => prev.map((l) => (l.id === id ? { ...l, [field]: value } : l)));
+  const toOptions = BRANCHES.filter((branch) => branch !== sender);
+  const to = toOptions.includes(toBranch) ? toBranch : "";
 
+  const updateLine = (id, field, value) =>
+    setLines((prev) => prev.map((line) => (line.id === id ? { ...line, [field]: value } : line)));
   const removeLine = (id) =>
-    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
+    setLines((prev) => (prev.length > 1 ? prev.filter((line) => line.id !== id) : prev));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!to) {
+      setError("Choose the receiving branch");
+      return;
+    }
     setSaving(true);
     try {
-      await onSubmit?.({ date, fromBranch: selectedFromBranch, toBranch, lines, status: "pending" });
+      await onSubmit?.({
+        fromBranch: sender,
+        toBranch: to,
+        lines: lines.map(({ size, qty }) => ({ size, qty: Number(qty) })),
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,59 +48,27 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
       <div className="db-field-row">
         <div className="db-field">
           <label>From branch</label>
-          {branches.includes(fromBranch) ? (
+          {fromBranch ? (
             <input value={fromBranch} disabled />
           ) : (
-            <select
-              value={selectedFromBranch}
-              onChange={(e) => {
-                const nextFromBranch = e.target.value;
-                setSelectedFromBranch(nextFromBranch);
-                if (toBranch === nextFromBranch) {
-                  setToBranch(branches.find((b) => b !== nextFromBranch) || "");
-                }
-              }}
-              required
-            >
-              {branches.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
+            <Select value={from} onChange={setFrom} options={BRANCHES} />
           )}
         </div>
         <div className="db-field">
           <label>To branch</label>
-          <select value={toBranch} onChange={(e) => setToBranch(e.target.value)} required>
-            <option value="" disabled>
-              Select branch
-            </option>
-            {branches
-              .filter((b) => b !== selectedFromBranch)
-              .map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-          </select>
+          <Select value={to} onChange={setToBranch} options={toOptions} placeholder="Select branch" />
         </div>
       </div>
 
       <div className="db-field">
-        <label>Transfer date</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-      </div>
-
-      <div className="db-field">
-        <label>Products to transfer</label>
+        <label>Sizes being transferred</label>
         <div className="db-line-items">
           {lines.map((line) => (
             <div className="db-line-item" style={{ gridTemplateColumns: "1fr 80px 28px" }} key={line.id}>
               <input
-                placeholder="Product name"
-                value={line.product}
-                onChange={(e) => updateLine(line.id, "product", e.target.value)}
+                placeholder="Size, e.g. 205/55R16"
+                value={line.size}
+                onChange={(e) => updateLine(line.id, "size", e.target.value)}
                 required
               />
               <input
@@ -118,19 +89,17 @@ const TransferNoteForm = ({ branches = DEFAULT_BRANCHES, fromBranch, onSubmit, o
               </button>
             </div>
           ))}
-          <button type="button" className="db-add-line" onClick={() => setLines((p) => [...p, newLine()])}>
-            + Add product
+          <button type="button" className="db-add-line" onClick={() => setLines((prev) => [...prev, newLine()])}>
+            + Add size
           </button>
         </div>
       </div>
 
       {error && <p style={{ color: "#a23b2a", fontSize: 13 }}>{error}</p>}
       <div className="db-modal-foot">
-        <button type="button" className="db-btn db-btn-outline" onClick={onCancel}>
-          Cancel
-        </button>
+        <button type="button" className="db-btn db-btn-outline" onClick={onCancel}>Cancel</button>
         <button type="submit" className="db-btn db-btn-primary" disabled={saving}>
-          {saving ? "Submitting…" : "Create delivery note"}
+          {saving ? "Creating…" : "Create transfer note"}
         </button>
       </div>
     </form>

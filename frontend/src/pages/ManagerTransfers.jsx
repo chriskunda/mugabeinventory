@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { transfersApi } from "../api/transfers";
-import { downloadTransferPdf } from "../api/reports";
+import { downloadTransferPdf } from "../api/transfers";
 import Modal from "../components/dashboard/Modal";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
+import TransferNoteView from "../components/dashboard/TransferNoteView";
 
 const ManagerTransfers = () => {
   const { user } = useAuth();
@@ -11,6 +12,7 @@ const ManagerTransfers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [viewing, setViewing] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -36,10 +38,9 @@ const ManagerTransfers = () => {
 
   const handleDownload = async (transfer) => {
     try {
-      const date = new Date(transfer.date).toISOString().slice(0, 10);
       await downloadTransferPdf(
         transfer._id,
-        `transfer-${transfer.fromBranch?.name}-${transfer.toBranch?.name}-${date}.pdf`
+        `transfer-${transfer.fromBranch?.name}-to-${transfer.toBranch?.name}.pdf`
       );
     } catch (e) {
       setError(e.message);
@@ -92,14 +93,13 @@ const ManagerTransfers = () => {
                     </td>
                     <td data-label="">
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>
-                          PDF
-                        </button>
-                      {t.status === "pending" && t.toBranch?.name === user?.branch && (
-                        <button className="db-btn db-btn-ghost" onClick={() => handleReceive(t._id)}>
-                          Mark received
-                        </button>
-                      )}
+                        <button className="db-btn db-btn-ghost" onClick={() => setViewing(t)}>View</button>
+                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>PDF</button>
+                        {t.status === "pending" && t.toBranch?.name === user?.branch && (
+                          <button className="db-btn db-btn-ghost" onClick={() => handleReceive(t._id)}>
+                            Mark received
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -113,6 +113,11 @@ const ManagerTransfers = () => {
       {showModal && (
         <Modal title="New transfer note" subtitle={`From ${user?.branch}`} onClose={() => setShowModal(false)}>
           <TransferNoteForm fromBranch={user?.branch} onCancel={() => setShowModal(false)} onSubmit={handleCreate} />
+        </Modal>
+      )}
+      {viewing && (
+        <Modal title="Transfer note" onClose={() => setViewing(null)}>
+          <TransferNoteView note={viewing} />
         </Modal>
       )}
     </div>

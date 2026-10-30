@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [trend, setTrend] = useState([]);
+  const [branchRows, setBranchRows] = useState([]);
   const [stmt, setStmt] = useState(null);
   const [overviewError, setOverviewError] = useState("");
 
@@ -41,6 +42,13 @@ const AdminDashboard = () => {
     financeApi
       .incomeStatement("month", month)
       .then(setStmt)
+      .catch((err) => setOverviewError(err.message));
+  }, []);
+
+  useEffect(() => {
+    api
+      .get(`/dashboard/branches?month=${new Date().toISOString().slice(0, 7)}`)
+      .then(setBranchRows)
       .catch((err) => setOverviewError(err.message));
   }, []);
 
@@ -153,6 +161,25 @@ const AdminDashboard = () => {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+
+        <div className="db-panel">
+          <div className="db-panel-head"><div><h2>Branches this month</h2><div className="sub">Kimironko, Sonatube and Kinamba side by side</div></div></div>
+          <div className="db-panel-body">
+            <table className="db-table">
+              <thead><tr><th>Branch</th><th>Reports</th><th>Tyres sold</th><th>Sales</th></tr></thead>
+              <tbody>
+                {branchRows.map((b) => (
+                  <tr key={b.branch}>
+                    <td data-label="Branch">{b.branch}</td>
+                    <td data-label="Reports">{b.reports}</td>
+                    <td data-label="Tyres">{b.tyres}</td>
+                    <td data-label="Sales" className="db-num">{fmt(b.sales)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

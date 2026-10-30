@@ -1,6 +1,7 @@
 import express from "express";
 import {
   getSalesTrend,
+  getBranchSummary,
   getIncomeStatement,
   exportIncomeExcel,
   exportIncomePdf,
@@ -11,6 +12,7 @@ const router = express.Router();
 
 router.use(protect, restrictTo("admin"));
 router.get("/sales-trend", getSalesTrend);
+router.get("/branches", getBranchSummary);
 router.get("/income-statement", getIncomeStatement);
 router.get("/income-statement/excel", exportIncomeExcel);
 router.get("/income-statement/pdf", exportIncomePdf);

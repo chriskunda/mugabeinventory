@@ -1,6 +1,6 @@
 import Return from "../models/Return.js";
 import Branch from "../models/Branch.js";
-import { findOrCreateBranch } from "../utils/branches.js";
+import { ALLOWED_BRANCHES, findOrCreateBranch } from "../utils/branches.js";
 import { getRange } from "../utils/period.js";
 
 export const createReturn = async (req, res, next) => {
@@ -9,8 +9,11 @@ export const createReturn = async (req, res, next) => {
     if (!date || !tireName || !size || !["good", "damaged"].includes(condition)) {
       return res.status(400).json({ message: "Date, tire, size and condition are required" });
     }
-    const branchId =
-      req.user.role === "admin" && branch ? (await findOrCreateBranch(branch))._id : req.user.branch._id;
+    let branchId = req.user.branch?._id;
+    if (req.user.role === "admin") {
+      if (!branch) return res.status(400).json({ message: "Choose a branch" });
+      branchId = (await findOrCreateBranch(branch))._id;
+    }
 
     const doc = await Return.create({
       branch: branchId, createdBy: req.user._id, date, tireName, size, dot,
@@ -50,7 +53,7 @@ export const getReturnsSummary = async (req, res, next) => {
       { $match: { date: { $gte: start, $lt: end } } },
       { $group: { _id: { branch: "$branch", condition: "$condition" }, qty: { $sum: "$quantity" }, refunds: { $sum: "$refundAmount" } } },
     ]);
-    const branches = await Branch.find();
+    const branches = await Branch.find({ name: { $in: ALLOWED_BRANCHES } });
     res.json(
       branches.map((b) => {
         const mine = rows.filter((r) => String(r._id.branch) === String(b._id));

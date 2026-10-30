@@ -1,5 +1,7 @@
 import ExcelJS from "exceljs";
 import SalesReport from "../models/SalesReport.js";
+import Branch from "../models/Branch.js";
+import { ALLOWED_BRANCHES } from "../utils/branches.js";
 import { getRange } from "../utils/period.js";
 import { incomeStatement } from "../utils/finance.js";
 import { startPdf, line, row, fmt } from "../utils/pdf.js";
@@ -33,6 +35,26 @@ export const getSalesTrend = async (req, res, next) => {
       results.push({ month: d.toLocaleString("en", { month: "short" }), year: d.getFullYear(), sales: agg[0]?.total || 0 });
     }
     res.json(results);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getBranchSummary = async (req, res, next) => {
+  try {
+    const { start, end } = getRange("month", req.query.month);
+    const rows = await SalesReport.aggregate([
+      { $match: { date: { $gte: start, $lt: end } } },
+      { $group: { _id: "$branch", sales: { $sum: "$grandTotal" }, tyres: { $sum: "$totalTyres" }, reports: { $sum: 1 } } },
+    ]);
+    const branches = await Branch.find({ name: { $in: ALLOWED_BRANCHES } });
+    res.json(
+      ALLOWED_BRANCHES.map((name) => {
+        const b = branches.find((x) => x.name === name);
+        const r = b && rows.find((x) => String(x._id) === String(b._id));
+        return { branch: name, sales: r?.sales || 0, tyres: r?.tyres || 0, reports: r?.reports || 0 };
+      })
+    );
   } catch (err) {
     next(err);
   }

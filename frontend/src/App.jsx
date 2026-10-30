@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./components/login.jsx";
 import DashboardLayout from "./components/dashboard/DashboardLayout.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+import AdminProducts from "./pages/AdminProducts.jsx";
 import ManagerDashboard from "./pages/ManagerDashboard.jsx";
 import AdminSalesReports from "./pages/AdminSalesReports.jsx";
 import AdminManagers from "./pages/AdminManagers.jsx";
@@ -47,7 +48,7 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="sales-reports" element={<AdminSalesReports />} />
             <Route path="managers" element={<AdminManagers />} />
-            <Route path="products" element={<Placeholder title="Products" />} />
+            <Route path="products" element={<AdminProducts />} />
             <Route path="transfers" element={<AdminTransfers />} />
             <Route path="returns" element={<Returns />} />
             <Route path="income-statement" element={<AdminIncomeStatement />} />

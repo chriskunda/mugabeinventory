@@ -488,3 +488,16 @@
   font: inherit;
   background: #fff;
 }
+
+.db-tn { background: var(--db-cream); border: 1px solid var(--db-line); border-radius: 12px; padding: 20px; }
+.db-tn-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.db-tn-title { font-family: var(--db-font-serif); font-size: 20px; font-weight: 600; }
+.db-tn-route { margin-top: 4px; color: var(--db-muted); font-size: 13.5px; }
+.db-tn-route span { color: var(--db-rust); }
+.db-tn-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; font-size: 13.5px; }
+.db-tn-table th { background: var(--db-rust-soft); color: var(--db-rust); text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; padding: 10px 12px; }
+.db-tn-table td { padding: 11px 12px; border-bottom: 1px solid var(--db-line); }
+.db-tn-table .r { text-align: right; font-family: var(--db-font-mono); }
+.db-tn-table tfoot td { font-weight: 700; border-bottom: none; }
+.db-tn-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 22px; font-size: 13.5px; flex-wrap: wrap; }
+.db-tn-stamp { color: var(--db-muted); font-size: 12.5px; }

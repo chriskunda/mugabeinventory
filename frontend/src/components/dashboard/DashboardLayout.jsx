@@ -26,7 +26,7 @@ const MANAGER_NAV = [
  * role: "admin" | "manager"
  * user: { name, branch }
  */
-const DashboardLayout = ({ role, user = { name: "User", branch: "Main" } }) => {
+const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [notes, setNotes] = useState({ items: [], unread: 0 });
@@ -117,7 +117,7 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "Main" } }) => {
 
       <div className="db-main">
         <header className="db-topbar">
-          <div className="db-branch-pill">{user.branch} branch</div>
+          <div className="db-branch-pill">{role === "admin" ? "All branches" : `${user.branch} branch`}</div>
           <div className="db-topbar-actions">
             <div className="db-bell-wrap">
               <button

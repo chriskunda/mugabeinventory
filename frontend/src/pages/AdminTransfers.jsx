@@ -1,18 +1,20 @@
 import { useEffect, useState } from "react";
 import { transfersApi } from "../api/transfers";
-import { downloadTransferPdf } from "../api/reports";
+import { downloadTransferPdf } from "../api/transfers";
+import Modal from "../components/dashboard/Modal";
+import TransferNoteView from "../components/dashboard/TransferNoteView";
 
 const AdminTransfers = () => {
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [viewing, setViewing] = useState(null);
 
   const handleDownload = async (transfer) => {
     try {
-      const date = new Date(transfer.date).toISOString().slice(0, 10);
       await downloadTransferPdf(
         transfer._id,
-        `transfer-${transfer.fromBranch?.name}-${transfer.toBranch?.name}-${date}.pdf`
+        `transfer-${transfer.fromBranch?.name}-to-${transfer.toBranch?.name}.pdf`
       );
     } catch (e) {
       setError(e.message);
@@ -69,9 +71,10 @@ const AdminTransfers = () => {
                       <span className={`db-badge ${t.status}`}>{t.status}</span>
                     </td>
                     <td data-label="">
-                      <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>
-                        PDF
-                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button className="db-btn db-btn-ghost" onClick={() => setViewing(t)}>View</button>
+                        <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>PDF</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -80,6 +83,12 @@ const AdminTransfers = () => {
           )}
         </div>
       </div>
+
+      {viewing && (
+        <Modal title="Transfer note" onClose={() => setViewing(null)}>
+          <TransferNoteView note={viewing} />
+        </Modal>
+      )}
     </div>
   );
 };
