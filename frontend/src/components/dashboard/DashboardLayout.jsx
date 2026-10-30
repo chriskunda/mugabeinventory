@@ -93,7 +93,7 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
       <aside className="db-sidebar">
         <div className="db-brand">
           <span className="db-brand-mark">◆</span>
-          <span>Ledger</span>
+          <span>Operations</span>
         </div>
         <nav className="db-nav">
           {nav.map((item) => (
