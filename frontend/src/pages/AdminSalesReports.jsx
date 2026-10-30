@@ -8,6 +8,7 @@ import {
 import Modal from "../components/dashboard/Modal";
 import ReportView from "../components/dashboard/ReportView";
 import { BRANCHES } from "../components/dashboard/DailyReportForm";
+import DatePicker from "../components/ui/DatePicker";
 
 const AdminSalesReports = () => {
   const [reports, setReports] = useState([]);
@@ -91,15 +92,17 @@ const AdminSalesReports = () => {
             {b || "All branches"}
           </button>
         ))}
-        <input
-          type="month"
+        <DatePicker
+          mode="month"
+          clearable
+          placeholder="Any month"
           value={month}
-          onChange={(e) => {
-            if (month !== e.target.value) {
+          onChange={(value) => {
+            if (month !== value) {
               setLoading(true);
               setError("");
             }
-            setMonth(e.target.value);
+            setMonth(value);
           }}
         />
         {month && (

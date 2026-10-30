@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { returnsApi } from "../api/admin";
 import Modal from "../components/dashboard/Modal";
+import Select from "../components/ui/Select";
+import DatePicker from "../components/ui/DatePicker";
 import { BRANCHES } from "../components/dashboard/DailyReportForm";
 import "./AdminDashboard.css";
 
@@ -55,12 +57,13 @@ const Returns = () => {
       </div>
 
       <div className="db-toolbar">
-        <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+        <DatePicker mode="month" value={month} onChange={setMonth} />
         {isAdmin && (
-          <select value={branch} onChange={(e) => setBranch(e.target.value)}>
-            <option value="">All branches</option>
-            {BRANCHES.map((b) => <option key={b}>{b}</option>)}
-          </select>
+          <Select
+            value={branch}
+            onChange={setBranch}
+            options={[{ value: "", label: "All branches" }, ...BRANCHES]}
+          />
         )}
       </div>
       {error && <div className="db-empty">{error}</div>}
@@ -114,7 +117,7 @@ const Returns = () => {
         <Modal title="Record a return" subtitle={user?.branch} onClose={() => setOpen(false)}>
           <form onSubmit={submit}>
             <div className="db-field-row">
-              <div className="db-field"><label>Date</label><input type="date" value={form.date} onChange={set("date")} required /></div>
+              <div className="db-field"><label>Date</label><DatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} /></div>
               <div className="db-field"><label>Quantity</label><input type="number" min="1" value={form.quantity} onChange={set("quantity")} required /></div>
             </div>
             <div className="db-field-row">
@@ -124,10 +127,14 @@ const Returns = () => {
             <div className="db-field-row">
               <div className="db-field"><label>DOT</label><input value={form.dot} onChange={set("dot")} /></div>
               <div className="db-field"><label>Condition</label>
-                <select value={form.condition} onChange={set("condition")}>
-                  <option value="good">Still OK. Add back to stock</option>
-                  <option value="damaged">Damaged</option>
-                </select>
+                <Select
+                  value={form.condition}
+                  onChange={(v) => setForm({ ...form, condition: v })}
+                  options={[
+                    { value: "good", label: "Still OK, add back to stock" },
+                    { value: "damaged", label: "Damaged" },
+                  ]}
+                />
               </div>
             </div>
             <div className="db-field"><label>Refund amount (RWF)</label><input type="number" min="0" value={form.refundAmount} onChange={set("refundAmount")} /></div>

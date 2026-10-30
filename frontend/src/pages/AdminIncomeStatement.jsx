@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { financeApi } from "../api/admin";
 import { downloadFile } from "../api/reports";
+import Select from "../components/ui/Select";
+import DatePicker from "../components/ui/DatePicker";
 import "./AdminDashboard.css";
 
 const now = new Date();
@@ -62,19 +64,25 @@ const AdminIncomeStatement = () => {
       </div>
 
       <div className="db-toolbar">
-        <select value={period} onChange={(e) => setPeriod(e.target.value)}>
-          <option value="month">Month</option>
-          <option value="quarter">Quarter</option>
-          <option value="year">Year</option>
-        </select>
-        {period === "month" && <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />}
+        <Select
+          value={period}
+          onChange={setPeriod}
+          options={[
+            { value: "month", label: "Month" },
+            { value: "quarter", label: "Quarter" },
+            { value: "year", label: "Year" },
+          ]}
+        />
+        {period === "month" && <DatePicker mode="month" value={month} onChange={setMonth} />}
         {period !== "month" && (
           <input type="number" value={year} min="2000" max="2100" onChange={(e) => setYear(e.target.value)} style={{ width: 90 }} />
         )}
         {period === "quarter" && (
-          <select value={quarter} onChange={(e) => setQuarter(e.target.value)}>
-            {[1, 2, 3, 4].map((q) => <option key={q} value={q}>Q{q}</option>)}
-          </select>
+          <Select
+            value={quarter}
+            onChange={setQuarter}
+            options={[1, 2, 3, 4].map((q) => ({ value: q, label: `Q${q}` }))}
+          />
         )}
       </div>
 
@@ -111,7 +119,7 @@ const AdminIncomeStatement = () => {
                   <div className="db-field"><label>Amount (RWF)</label>
                     <input type="number" min="1" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} /></div>
                   <div className="db-field"><label>Date</label>
-                    <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+                    <DatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} /></div>
                 </div>
                 <div className="db-field"><label>Notes</label>
                   <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>

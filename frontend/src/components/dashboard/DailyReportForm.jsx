@@ -1,4 +1,6 @@
 import { useState } from "react";
+import Select from "../ui/Select";
+import DatePicker from "../ui/DatePicker";
 
 let uid = 0;
 const newTire = () => ({ id: `t${uid++}`, name: "", size: "", dot: "", price: "" });
@@ -94,17 +96,11 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
       <div className="db-field-row">
         <div className="db-field">
           <label>Branch this report is for</label>
-          <select value={branch} onChange={(e) => setBranch(e.target.value)} required>
-            {BRANCHES.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
+          <Select value={branch} onChange={setBranch} options={BRANCHES} />
         </div>
         <div className="db-field">
           <label>Date</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          <DatePicker value={date} onChange={setDate} />
         </div>
       </div>
 

@@ -222,6 +222,17 @@ body {
   background: #212625;
 }
 
+.login-4-card .form button.ui-select {
+  width: 100%;
+  margin-top: 0;
+  padding: 14px 12px;
+  letter-spacing: 0;
+  background: #f3f3f1;
+  color: #212625;
+  border: 0;
+  border-radius: 10px;
+}
+
 .login-4-card .form button:disabled {
   opacity: 0.6;
   cursor: wait;

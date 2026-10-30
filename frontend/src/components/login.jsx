@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { BRANCHES } from "./dashboard/DailyReportForm";
+import Select from "./ui/Select";
 import "./login.css";
 
 const CardBackground = ({ activeView }) => {
@@ -32,6 +33,10 @@ const RegisterForm = ({ activeView }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!form.branch) {
+      setError("Please choose your branch");
+      return;
+    }
     setLoading(true);
     try {
       await register(form);
@@ -62,27 +67,12 @@ const RegisterForm = ({ activeView }) => {
       <form onSubmit={handleSubmit}>
         <input type="text" placeholder="Full name" value={form.name} onChange={update("name")} required />
         <input type="email" placeholder="Email address" value={form.email} onChange={update("email")} required />
-        <select
+        <Select
           value={form.branch}
-          onChange={update("branch")}
-          required
-          style={{
-            width: "100%",
-            padding: "14px 12px",
-            border: 0,
-            borderRadius: 10,
-            background: "#f3f3f1",
-          }}
-        >
-          <option value="" disabled>
-            Select your branch
-          </option>
-          {BRANCHES.map((branch) => (
-            <option key={branch} value={branch}>
-              {branch}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => setForm((f) => ({ ...f, branch: value }))}
+          options={BRANCHES}
+          placeholder="Select your branch"
+        />
         <input
           type="password"
           placeholder="Password"
