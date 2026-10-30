@@ -16,8 +16,11 @@ import dashboardRoutes from "./src/routes/dashboardRoutes.js";
 import expenseRoutes from "./src/routes/expenseRoutes.js";
 import returnRoutes from "./src/routes/returnRoutes.js";
 import goalRoutes from "./src/routes/goalRoutes.js";
+import branchRoutes from "./src/routes/branchRoutes.js";
+import accessRoutes from "./src/routes/accessRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
 import { evaluateGoals } from "./src/controllers/goalController.js";
+
 
 dotenv.config();
 
@@ -47,6 +50,8 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/goals", goalRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/branches", branchRoutes);
+app.use("/api/access", accessRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
