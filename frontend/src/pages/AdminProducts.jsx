@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { productsApi } from "../api/products";
+import useBranches from "../hooks/useBranches";
 import Modal from "../components/dashboard/Modal";
 import Select from "../components/ui/Select";
-import { BRANCHES } from "../components/dashboard/DailyReportForm";
 import "./AdminDashboard.css";
 
 const ACTIONS = [
@@ -11,20 +11,21 @@ const ACTIONS = [
   { value: "set", label: "Set exact count" },
 ];
 
-const AdjustForm = ({ product, onDone, onCancel }) => {
-  const [branch, setBranch] = useState(BRANCHES[0]);
+const AdjustForm = ({ product, branches, onDone, onCancel }) => {
+  const [branch, setBranch] = useState(branches[0] ?? "");
   const [action, setAction] = useState("add");
   const [quantity, setQuantity] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const current = product.stocks.find((s) => s.branch === branch)?.qty ?? 0;
+  const selectedBranch = branches.includes(branch) ? branch : branches[0] ?? "";
+  const current = product.stocks.find((s) => s.branch === selectedBranch)?.qty ?? 0;
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     setSaving(true);
     try {
-      await productsApi.adjust(product.id, { branch, action, quantity: Number(quantity) });
+      await productsApi.adjust(product.id, { branch: selectedBranch, action, quantity: Number(quantity) });
       onDone();
     } catch (err) {
       setError(err.message);
@@ -36,13 +37,13 @@ const AdjustForm = ({ product, onDone, onCancel }) => {
   return (
     <form onSubmit={submit}>
       <div className="db-field-row">
-        <div className="db-field"><label>Branch</label><Select value={branch} onChange={setBranch} options={BRANCHES} /></div>
+        <div className="db-field"><label>Branch</label><Select value={selectedBranch} onChange={setBranch} options={branches} /></div>
         <div className="db-field"><label>What to do</label><Select value={action} onChange={setAction} options={ACTIONS} /></div>
       </div>
       <div className="db-field">
         <label>Quantity</label>
         <input type="number" min="0" step="1" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-        <span style={{ fontSize: 12.5, color: "var(--db-muted)" }}>Currently {current} at {branch}</span>
+        <span style={{ fontSize: 12.5, color: "var(--db-muted)" }}>Currently {current} at {selectedBranch}</span>
       </div>
       {error && <p style={{ color: "#a23b2a", fontSize: 13 }}>{error}</p>}
       <div className="db-modal-foot">
@@ -53,7 +54,7 @@ const AdjustForm = ({ product, onDone, onCancel }) => {
   );
 };
 
-const AddForm = ({ onDone, onCancel }) => {
+const AddForm = ({ branches, onDone, onCancel }) => {
   const [name, setName] = useState("");
   const [stocks, setStocks] = useState({});
   const [error, setError] = useState("");
@@ -82,7 +83,7 @@ const AddForm = ({ onDone, onCancel }) => {
       <div className="db-field">
         <label>Opening stock (optional)</label>
         <div className="db-field-row" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-          {BRANCHES.map((b) => (
+          {branches.map((b) => (
             <input
               key={b} type="number" min="0" placeholder={b}
               value={stocks[b] ?? ""} onChange={(e) => setStocks({ ...stocks, [b]: e.target.value })}
@@ -100,6 +101,7 @@ const AddForm = ({ onDone, onCancel }) => {
 };
 
 const AdminProducts = () => {
+  const { names } = useBranches();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -151,7 +153,7 @@ const AdminProducts = () => {
               <thead>
                 <tr>
                   <th>Product</th>
-                  {BRANCHES.map((b) => <th key={b}>{b}</th>)}
+                  {names.map((b) => <th key={b}>{b}</th>)}
                   <th>Total</th>
                   <th></th>
                 </tr>
@@ -160,7 +162,7 @@ const AdminProducts = () => {
                 {products.map((p) => (
                   <tr key={p.id}>
                     <td data-label="Product"><strong>{p.name}</strong></td>
-                    {BRANCHES.map((b) => {
+                    {names.map((b) => {
                       const qty = p.stocks.find((s) => s.branch === b)?.qty ?? 0;
                       return (
                         <td key={b} data-label={b} className="db-num" style={qty === 0 ? { color: "var(--db-muted)" } : undefined}>
@@ -185,12 +187,12 @@ const AdminProducts = () => {
 
       {adjusting && (
         <Modal title="Adjust stock" subtitle={adjusting.name} onClose={() => setAdjusting(null)}>
-          <AdjustForm product={adjusting} onDone={done} onCancel={() => setAdjusting(null)} />
+          <AdjustForm product={adjusting} branches={names} onDone={done} onCancel={() => setAdjusting(null)} />
         </Modal>
       )}
       {adding && (
         <Modal title="New product" subtitle="Add something else you sell" onClose={() => setAdding(false)}>
-          <AddForm onDone={done} onCancel={() => setAdding(false)} />
+          <AddForm branches={names} onDone={done} onCancel={() => setAdding(false)} />
         </Modal>
       )}
     </div>

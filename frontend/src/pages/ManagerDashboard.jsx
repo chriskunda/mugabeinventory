@@ -104,7 +104,7 @@ const ManagerDashboard = () => {
                       <span className={`db-badge ${r.status}`}>{r.status.replace("_", " ")}</span>
                     </td>
                     <td data-label="">
-                      {r.status === "submitted" ? (
+                      {r.status === "submitted" && r.manager?._id === user?.id ? (
                         <button className="db-btn db-btn-ghost" onClick={() => requestEdit(r._id)}>
                           Request edit
                         </button>

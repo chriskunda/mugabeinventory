@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import useBranches from "../../hooks/useBranches";
+import { accessApi } from "../../api/access";
 import Select from "../ui/Select";
 import DatePicker from "../ui/DatePicker";
 
@@ -7,11 +10,26 @@ const newTire = () => ({ id: `t${uid++}`, name: "", size: "", dot: "", price: ""
 const newClient = () => ({ id: `c${uid++}`, clientName: "", clientPhone: "", tires: [newTire()] });
 const newOtherSale = () => ({ id: `o${uid++}`, item: "", price: "" });
 
-const BRANCHES = ["Kimironko", "Sonatube", "Kinamba"];
-
 const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
-  const [branch, setBranch] = useState(BRANCHES.includes(defaultBranch) ? defaultBranch : BRANCHES[0]);
+  const { user } = useAuth();
+  const { names } = useBranches();
+  const [branch, setBranch] = useState(defaultBranch?.name ?? defaultBranch ?? "");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [approved, setApproved] = useState([]);
+  useEffect(() => {
+    if (user?.role === "manager") accessApi.mine().then(setApproved).catch(() => {});
+  }, [user]);
+
+  const options =
+    user?.role === "admin"
+      ? names
+      : [...new Set([
+          user?.branch?.name ?? user?.branch,
+          ...approved
+            .filter((a) => a.status === "approved" && a.date === date)
+            .map((a) => a.branch?.name),
+        ].filter(Boolean))];
+  const chosenBranch = options.includes(branch) ? branch : options[0] || "";
   const [openingStock, setOpeningStock] = useState("");
   const [clients, setClients] = useState([newClient()]);
   const [transfers, setTransfers] = useState([""]);
@@ -72,7 +90,7 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
     setSaving(true);
     try {
       await onSubmit?.({
-        branch,
+        branch: chosenBranch,
         date,
         openingStock: openingStock === "" ? undefined : Number(openingStock),
         clients: clients.map((c) => ({
@@ -96,7 +114,7 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
       <div className="db-field-row">
         <div className="db-field">
           <label>Branch this report is for</label>
-          <Select value={branch} onChange={setBranch} options={BRANCHES} />
+          <Select value={chosenBranch} onChange={setBranch} options={options} />
         </div>
         <div className="db-field">
           <label>Date</label>
@@ -281,4 +299,3 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
 };
 
 export default DailyReportForm;
-export { BRANCHES };

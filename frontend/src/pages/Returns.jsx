@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { returnsApi } from "../api/admin";
+import useBranches from "../hooks/useBranches";
 import Modal from "../components/dashboard/Modal";
 import Select from "../components/ui/Select";
 import DatePicker from "../components/ui/DatePicker";
-import { BRANCHES } from "../components/dashboard/DailyReportForm";
 import "./AdminDashboard.css";
 
 const today = () => new Date().toISOString().slice(0, 10);
-const blank = { date: today(), tireName: "", size: "", dot: "", quantity: 1, condition: "good", refundAmount: "", reason: "" };
+const blank = { date: today(), tireName: "", size: "", dot: "", quantity: 1, condition: "good", refundAmount: "", reason: "", branch: "" };
 
 const Returns = () => {
   const { user } = useAuth();
+  const { names } = useBranches();
   const isAdmin = user?.role === "admin";
   const [month, setMonth] = useState(today().slice(0, 7));
   const [branch, setBranch] = useState("");
@@ -31,6 +32,7 @@ const Returns = () => {
   const submit = async (e) => {
     e.preventDefault();
     setFormError("");
+    if (!form.branch) return setFormError("Choose the branch");
     try {
       await returnsApi.create({ ...form, quantity: Number(form.quantity), refundAmount: Number(form.refundAmount) || 0 });
       setOpen(false);
@@ -49,7 +51,7 @@ const Returns = () => {
           <h1>Sales returns</h1>
           <p>{isAdmin ? "Returns from every branch: damaged vs. back in stock." : `Returns for ${user?.branch}.`}</p>
         </div>
-        {!isAdmin && (
+        {isAdmin && (
           <div className="db-actions">
             <button className="db-btn db-btn-primary" onClick={() => setOpen(true)}>+ Record return</button>
           </div>
@@ -62,7 +64,7 @@ const Returns = () => {
           <Select
             value={branch}
             onChange={setBranch}
-            options={[{ value: "", label: "All branches" }, ...BRANCHES]}
+            options={[{ value: "", label: "All branches" }, ...names]}
           />
         )}
       </div>
@@ -116,6 +118,7 @@ const Returns = () => {
       {open && (
         <Modal title="Record a return" subtitle={user?.branch} onClose={() => setOpen(false)}>
           <form onSubmit={submit}>
+            <div className="db-field"><label>Branch</label><Select value={form.branch} onChange={(v) => setForm({ ...form, branch: v })} options={names} placeholder="Select branch" /></div>
             <div className="db-field-row">
               <div className="db-field"><label>Date</label><DatePicker value={form.date} onChange={(v) => setForm({ ...form, date: v })} /></div>
               <div className="db-field"><label>Quantity</label><input type="number" min="1" value={form.quantity} onChange={set("quantity")} required /></div>

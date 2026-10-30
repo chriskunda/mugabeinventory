@@ -3,6 +3,7 @@ import { api, API_BASE_URL } from "./client";
 export const reportsApi = {
   create: (payload) => api.post("/reports", payload),
   mine: () => api.get("/reports/mine"),
+  search: (params) => api.get(`/reports/search?${new URLSearchParams(params)}`),
   all: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/reports${qs ? `?${qs}` : ""}`);

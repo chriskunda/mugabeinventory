@@ -501,3 +501,13 @@
 .db-tn-table tfoot td { font-weight: 700; border-bottom: none; }
 .db-tn-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 22px; font-size: 13.5px; flex-wrap: wrap; }
 .db-tn-stamp { color: var(--db-muted); font-size: 12.5px; }
+
+.db-btn-danger { background: var(--db-clay); color: #fff; }
+.db-btn-danger:hover { background: #8a2f21; }
+.db-badge.rejected { background: var(--db-clay-soft); color: var(--db-clay); }
+.db-warn { background: var(--db-clay-soft); color: #7a2a1d; border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.5; margin-bottom: 14px; }
+.db-days { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.db-day { border: 1px solid var(--db-line); background: #fff; border-radius: 10px; padding: 10px 14px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.db-day.on { background: var(--db-rust); border-color: var(--db-rust); color: #fff; }
+.db-avatar-btn { border: none; padding: 0; cursor: pointer; overflow: hidden; }
+.db-avatar img { width: 100%; height: 100%; object-fit: cover; }

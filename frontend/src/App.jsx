@@ -11,6 +11,8 @@ import AdminManagers from "./pages/AdminManagers.jsx";
 import AdminTransfers from "./pages/AdminTransfers.jsx";
 import AdminIncomeStatement from "./pages/AdminIncomeStatement.jsx";
 import AdminGoals from "./pages/AdminGoals.jsx";
+import AdminBranches from "./pages/AdminBranches.jsx";
+import ClientSearch from "./pages/ClientSearch.jsx";
 import Returns from "./pages/Returns.jsx";
 import ManagerReports from "./pages/ManagerReports.jsx";
 import ManagerTransfers from "./pages/ManagerTransfers.jsx";
@@ -53,6 +55,8 @@ function App() {
             <Route path="returns" element={<Returns />} />
             <Route path="income-statement" element={<AdminIncomeStatement />} />
             <Route path="goals" element={<AdminGoals />} />
+            <Route path="branches" element={<AdminBranches />} />
+            <Route path="search" element={<ClientSearch />} />
           </Route>
 
           <Route
@@ -66,7 +70,7 @@ function App() {
             <Route index element={<ManagerDashboard />} />
             <Route path="reports" element={<ManagerReports />} />
             <Route path="transfers" element={<ManagerTransfers />} />
-            <Route path="returns" element={<Returns />} />
+            <Route path="search" element={<ClientSearch />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

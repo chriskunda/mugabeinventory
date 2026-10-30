@@ -22,7 +22,12 @@ async function request(path, { method = "GET", body, headers } = {}) {
   const data = isJson ? await res.json() : null;
 
   if (!res.ok) {
-    throw new Error(data?.message || `Request failed (${res.status})`);
+    if (!path.startsWith("/auth/") && (res.status === 401 || data?.code === "DAY_OFF")) {
+      window.location.assign("/");
+    }
+    const err = new Error(data?.message || `Request failed (${res.status})`);
+    err.code = data?.code;
+    throw err;
   }
 
   return data;

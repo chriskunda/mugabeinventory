@@ -5,6 +5,7 @@ import { downloadTransferPdf } from "../api/transfers";
 import Modal from "../components/dashboard/Modal";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
 import TransferNoteView from "../components/dashboard/TransferNoteView";
+import BranchAccessPanel from "../components/dashboard/BranchAccessPanel";
 
 const ManagerTransfers = () => {
   const { user } = useAuth();
@@ -60,6 +61,8 @@ const ManagerTransfers = () => {
           </button>
         </div>
       </div>
+
+      <BranchAccessPanel />
 
       <div className="db-panel">
         <div className="db-panel-body">

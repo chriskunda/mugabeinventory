@@ -1,5 +1,7 @@
 const TZ = "Africa/Kigali";
 
+export const todayKigali = () => new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+
 export const formatStamp = (d) => {
   const x = new Date(d);
   const date = x.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: TZ });

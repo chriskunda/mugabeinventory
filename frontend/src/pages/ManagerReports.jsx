@@ -4,6 +4,7 @@ import { reportsApi, downloadReportPdf } from "../api/reports";
 import Modal from "../components/dashboard/Modal";
 import DailyReportForm from "../components/dashboard/DailyReportForm";
 import ReportView from "../components/dashboard/ReportView";
+import BranchAccessPanel from "../components/dashboard/BranchAccessPanel";
 
 const ManagerReports = () => {
   const { user } = useAuth();
@@ -58,6 +59,8 @@ const ManagerReports = () => {
         </div>
       </div>
 
+      <BranchAccessPanel />
+
       <div className="db-panel">
         <div className="db-panel-body">
           {loading ? (
@@ -72,6 +75,7 @@ const ManagerReports = () => {
                 <tr>
                   <th>Date</th>
                   <th>Branch</th>
+                  <th>Manager</th>
                   <th>Tyres</th>
                   <th>Grand total</th>
                   <th>Status</th>
@@ -83,6 +87,7 @@ const ManagerReports = () => {
                   <tr key={r._id}>
                     <td data-label="Date">{new Date(r.date).toLocaleDateString()}</td>
                     <td data-label="Branch">{r.branch?.name}</td>
+                    <td data-label="Manager">{r.manager?.name}</td>
                     <td data-label="Tyres">{r.totalTyres}</td>
                     <td data-label="Total" className="db-num">{r.grandTotal.toLocaleString()}</td>
                     <td data-label="Status">
@@ -96,7 +101,7 @@ const ManagerReports = () => {
                         <button className="db-btn db-btn-ghost" onClick={() => handleDownload(r)}>
                           PDF
                         </button>
-                        {r.status === "submitted" && (
+                        {r.status === "submitted" && r.manager?._id === user?.id && (
                           <button className="db-btn db-btn-ghost" onClick={() => requestEdit(r._id)}>
                             Request edit
                           </button>

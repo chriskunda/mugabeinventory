@@ -5,12 +5,13 @@ import {
   downloadReportPdf,
   downloadMonthExcel,
 } from "../api/reports";
+import useBranches from "../hooks/useBranches";
 import Modal from "../components/dashboard/Modal";
 import ReportView from "../components/dashboard/ReportView";
-import { BRANCHES } from "../components/dashboard/DailyReportForm";
 import DatePicker from "../components/ui/DatePicker";
 
 const AdminSalesReports = () => {
+  const { names } = useBranches();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,7 +77,7 @@ const AdminSalesReports = () => {
       </div>
 
       <div className="db-toolbar">
-        {["", ...BRANCHES].map((b) => (
+        {["", ...names].map((b) => (
           <button
             key={b || "all"}
             type="button"
