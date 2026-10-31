@@ -77,6 +77,8 @@ const AdminDashboard = () => {
 
   const net = stmt?.net ?? 0;
   const isProfit = net >= 0;
+  const ranked = [...branchRows].sort((a, b) => b.sales - a.sales);
+  const totalSales = ranked.reduce((sum, branch) => sum + branch.sales, 0);
 
   const lastMonth = trend.at(-1)?.sales ?? 0;
   const prevMonth = trend.at(-2)?.sales ?? 0;
@@ -165,19 +167,29 @@ const AdminDashboard = () => {
         </div>
 
         <div className="db-panel">
-          <div className="db-panel-head"><div><h2>Branches this month</h2><div className="sub">Kimironko, Sonatube and Kinamba side by side</div></div></div>
+          <div className="db-panel-head">
+            <div><h2>Branch ranking</h2><div className="sub">Ranked by sales this month</div></div>
+          </div>
           <div className="db-panel-body">
             <table className="db-table">
-              <thead><tr><th>Branch</th><th>Reports</th><th>Tyres sold</th><th>Sales</th></tr></thead>
+              <thead><tr><th>Rank</th><th>Branch</th><th>Reports</th><th>Tyres sold</th><th>Sales</th><th>Share</th></tr></thead>
               <tbody>
-                {branchRows.map((b) => (
-                  <tr key={b.branch}>
-                    <td data-label="Branch">{b.branch}</td>
-                    <td data-label="Reports">{b.reports}</td>
-                    <td data-label="Tyres">{b.tyres}</td>
-                    <td data-label="Sales" className="db-num">{fmt(b.sales)}</td>
-                  </tr>
-                ))}
+                {ranked.map((b, i) => {
+                  const share = totalSales ? Math.round((b.sales / totalSales) * 100) : 0;
+                  return (
+                    <tr key={b.branch}>
+                      <td data-label="Rank"><span className={`db-rank r${i + 1}`}>{i + 1}</span></td>
+                      <td data-label="Branch"><strong>{b.branch}</strong></td>
+                      <td data-label="Reports">{b.reports}</td>
+                      <td data-label="Tyres">{b.tyres}</td>
+                      <td data-label="Sales" className="db-num">{fmt(b.sales)}</td>
+                      <td data-label="Share">
+                        <div className="db-bar"><span style={{ width: `${share}%` }} /></div>
+                        <span className="db-num" style={{ fontSize: 12 }}>{share}%</span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

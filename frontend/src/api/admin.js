@@ -20,4 +20,12 @@ export const goalsApi = {
 export const notificationsApi = {
   list: () => api.get("/notifications"),
   readAll: () => api.post("/notifications/read-all"),
+  remove: (id) => api.delete(`/notifications/${id}`),
+  clear: () => api.delete("/notifications"),
+};
+export const purchasesApi = {
+  list: (params = {}) => api.get(`/purchases?${qs(params)}`),
+  create: (p) => api.post("/purchases", p),
+  resolve: (id, approve) => api.patch(`/purchases/${id}/resolve`, { approve }),
+  remove: (id) => api.delete(`/purchases/${id}`),
 };

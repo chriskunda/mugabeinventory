@@ -2,7 +2,8 @@ import ExcelJS from "exceljs";
 import SalesReport from "../models/SalesReport.js";
 import Return from "../models/Return.js";
 import { findOrCreateBranch, escapeRegex } from "../utils/branches.js";
-import AccessRequest from "../models/AccessRequest.js";
+import { branchApprovedOn } from "../utils/access.js";
+import { notifyUser } from "../utils/notify.js";
 import Branch from "../models/Branch.js";
 import { startPdf, line, row, fmt } from "../utils/pdf.js";
 
@@ -38,11 +39,7 @@ export const createReport = async (req, res, next) => {
     const branchDoc = await findOrCreateBranch(branch);
 
     if (req.user.role === "manager" && String(branchDoc._id) !== String(req.user.branch._id)) {
-      const approved = await AccessRequest.exists({
-        manager: req.user._id, kind: "branch", branch: branchDoc._id,
-        date: String(date).slice(0, 10), status: "approved",
-      });
-      if (!approved) {
+      if (!(await branchApprovedOn(req.user._id, branchDoc._id, String(date).slice(0, 10)))) {
         return res.status(403).json({ message: `The admin hasn't approved you to report for ${branchDoc.name} on that day` });
       }
     }
@@ -87,22 +84,36 @@ export const getMyReports = async (req, res, next) => {
   }
 };
 
-// GET /api/reports/search?product=&client=&branch= (product is required)
+const phoneRegex = (q) => {
+  if (!/^[\d\s+().-]+$/.test(q)) return null;
+  const digits = q.replace(/\D/g, "");
+  if (digits.length < 3) return null;
+  const core = digits.length > 9 && digits.startsWith("250") ? digits.slice(3) : digits;
+  return new RegExp(core.split("").join("[\\s.()-]*"));
+};
+
+// GET /api/reports/search?product=&client=&branch=
 export const searchSales = async (req, res, next) => {
   try {
     const product = String(req.query.product || "").trim();
     const client = String(req.query.client || "").trim();
-    if (product.length < 2) return res.status(400).json({ message: "Enter the product to search for first" });
+    if (product.length < 2 && client.length < 2) {
+      return res.status(400).json({ message: "Enter a client's name or phone number, or the product to search for" });
+    }
 
     const match = {};
     if (req.user.role !== "admin") match.branch = req.user.branch._id;
     else if (req.query.branch) match.branch = (await findOrCreateBranch(req.query.branch))._id;
 
-    const p = new RegExp(escapeRegex(product), "i");
-    const and = [{ $or: [{ "clients.tires.name": p }, { "clients.tires.size": p }] }];
+    const and = [];
+    if (product) {
+      const p = new RegExp(escapeRegex(product), "i");
+      and.push({ $or: [{ "clients.tires.name": p }, { "clients.tires.size": p }, { "clients.tires.dot": p }] });
+    }
     if (client) {
       const c = new RegExp(escapeRegex(client), "i");
-      and.push({ $or: [{ "clients.clientName": c }, { "clients.clientPhone": c }] });
+      const ph = phoneRegex(client);
+      and.push({ $or: [{ "clients.clientName": c }, { "clients.clientPhone": c }, ...(ph ? [{ "clients.clientPhone": ph }] : [])] });
     }
 
     const rows = await SalesReport.aggregate([
@@ -201,6 +212,12 @@ export const resolveEditRequest = async (req, res, next) => {
     report.editRequest.approved = !!req.body.approve;
     await report.save();
 
+    await notifyUser(
+      report.manager,
+      req.body.approve ? "Edit approved" : "Edit not approved",
+      `Your edit request for the ${report.date.toISOString().slice(0, 10)} report was ${req.body.approve ? "approved. You can edit it now" : "not approved"}.`,
+      req.body.approve ? "approved" : "rejected"
+    );
     res.json(report);
   } catch (err) {
     next(err);

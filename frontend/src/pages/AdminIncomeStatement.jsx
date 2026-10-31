@@ -3,6 +3,7 @@ import { financeApi } from "../api/admin";
 import { downloadFile } from "../api/reports";
 import Select from "../components/ui/Select";
 import DatePicker from "../components/ui/DatePicker";
+import { useDialog } from "../components/ui/dialogContext";
 import "./AdminDashboard.css";
 
 const now = new Date();
@@ -10,6 +11,7 @@ const today = now.toISOString().slice(0, 10);
 const fmt = (n) => `${(n || 0).toLocaleString()} RWF`;
 
 const AdminIncomeStatement = () => {
+  const { confirm, toast } = useDialog();
   const [period, setPeriod] = useState("month");
   const [month, setMonth] = useState(today.slice(0, 7));
   const [year, setYear] = useState(now.getFullYear());
@@ -45,9 +47,20 @@ const AdminIncomeStatement = () => {
     }
   };
   const removeExpense = async (id) => {
-    if (!window.confirm("Delete this expense?")) return;
-    await financeApi.deleteExpense(id);
-    load();
+    const accepted = await confirm({
+      title: "Delete expense?",
+      message: "This expense will be removed from the income statement.",
+      danger: true,
+      confirmLabel: "Delete",
+    });
+    if (!accepted) return;
+    try {
+      await financeApi.deleteExpense(id);
+      toast("Expense deleted.", "success");
+      load();
+    } catch (err) {
+      toast(err.message, "error");
+    }
   };
   const download = (kind) =>
     downloadFile(`/dashboard/income-statement/${kind}?period=${period}&value=${value}`,

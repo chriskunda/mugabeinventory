@@ -26,7 +26,7 @@ const DailyReportForm = ({ defaultBranch, onSubmit, onCancel }) => {
       : [...new Set([
           user?.branch?.name ?? user?.branch,
           ...approved
-            .filter((a) => a.status === "approved" && a.date === date)
+            .filter((a) => a.kind === "branch" && a.status === "approved" && a.date <= date && date <= (a.endDate || a.date))
             .map((a) => a.branch?.name),
         ].filter(Boolean))];
   const chosenBranch = options.includes(branch) ? branch : options[0] || "";

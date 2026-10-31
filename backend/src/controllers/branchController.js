@@ -6,6 +6,8 @@ import TransferNote from "../models/TransferNote.js";
 import Return from "../models/Return.js";
 import Expense from "../models/Expense.js";
 import Product from "../models/Product.js";
+import Goal from "../models/Goal.js";
+import Purchase from "../models/Purchase.js";
 import AccessRequest from "../models/AccessRequest.js";
 import { escapeRegex } from "../utils/branches.js";
 import { startPdf, line, fmt } from "../utils/pdf.js";
@@ -170,6 +172,8 @@ export const deleteBranch = async (req, res, next) => {
       Return.deleteMany({ branch: branch._id }),
       Expense.deleteMany({ branch: branch._id }),
       AccessRequest.deleteMany({ branch: branch._id }),
+      Goal.deleteMany({ branch: branch._id }),
+      Purchase.updateMany({ branch: branch._id }, { $unset: { branch: 1 } }),
       TransferNote.deleteMany({ $or: [{ fromBranch: branch._id }, { toBranch: branch._id }] }),
       Product.updateMany({}, { $pull: { stocks: { branch: branch._id } } }),
     ]);

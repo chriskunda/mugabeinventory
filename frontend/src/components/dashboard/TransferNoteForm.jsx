@@ -20,7 +20,12 @@ const TransferNoteForm = ({ onSubmit, onCancel }) => {
   const today = todayKigali();
   const fromOptions = isAdmin
     ? names
-    : [...new Set([user?.branch, ...approved.filter((a) => a.status === "approved" && a.date === today).map((a) => a.branch?.name)].filter(Boolean))];
+    : [...new Set([
+        user?.branch,
+        ...approved
+          .filter((a) => a.kind === "branch" && a.status === "approved" && a.date <= today && today <= (a.endDate || a.date))
+          .map((a) => a.branch?.name),
+      ].filter(Boolean))];
 
   const [from, setFrom] = useState("");
   const [toBranch, setToBranch] = useState("");

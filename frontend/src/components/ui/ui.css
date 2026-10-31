@@ -43,3 +43,8 @@
 .ui-cal-months .ui-cal-day { height: 40px; }
 .ui-cal-foot { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--db-line); }
 .ui-cal-link { border: none; background: none; color: var(--db-rust); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+
+.ui-stars { display: inline-flex; gap: 2px; font-size: 20px; vertical-align: middle; }
+.ui-stars button, .ui-stars span { color: #d9d2c7; background: none; border: none; padding: 0; cursor: default; font-size: inherit; line-height: 1; }
+.ui-stars button { cursor: pointer; }
+.ui-stars .on { color: #e0a526; }

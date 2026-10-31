@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import SalesReport from "../models/SalesReport.js";
+import Rating from "../models/Rating.js";
 import { findBranch } from "../utils/branches.js";
 import { COMPANY_EMAIL, EMAIL_MESSAGE } from "../utils/validators.js";
 
@@ -9,12 +10,18 @@ export const getManagers = async (req, res, next) => {
     const summaries = await Promise.all(
       managers.map(async (m) => {
         const reports = await SalesReport.find({ manager: m._id }).select("grandTotal status");
+        const r = await Rating.aggregate([
+          { $match: { manager: m._id } },
+          { $group: { _id: null, avg: { $avg: "$score" }, n: { $sum: 1 } } },
+        ]);
         return {
           id: m._id, name: m.name, email: m.email, branch: m.branch?.name,
           active: m.active, daysOff: m.daysOff || [],
           reportsCount: reports.length,
           totalSales: reports.reduce((s, r) => s + r.grandTotal, 0),
           status: reports.some((r) => r.status === "edit_requested") ? "edit_requested" : "approved",
+          rating: r[0] ? Math.round(r[0].avg * 10) / 10 : null,
+          ratingsCount: r[0]?.n || 0,
         };
       })
     );

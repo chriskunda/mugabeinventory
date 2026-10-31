@@ -1,0 +1,17 @@
+.dlg-toasts { position: fixed; top: 18px; right: 18px; z-index: 400; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 36px)); }
+.dlg-toast { display: flex; align-items: flex-start; gap: 10px; padding: 13px 14px; border-radius: 12px; background: #fff; border: 1px solid var(--db-line); border-left-width: 4px; box-shadow: 0 12px 32px rgba(33,38,37,.16); font: 13.5px/1.4 var(--db-font-sans); color: var(--db-ink); animation: dlg-in .18s ease-out; }
+.dlg-toast > span:nth-child(2) { flex: 1; }
+.dlg-toast button { border: none; background: none; font-size: 18px; line-height: 1; color: var(--db-muted); cursor: pointer; }
+.dlg-toast-icon { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.dlg-toast.success { border-left-color: #4f7a3f; background: #f3f8ef; } .dlg-toast.success .dlg-toast-icon { background: #4f7a3f; }
+.dlg-toast.error { border-left-color: var(--db-clay); background: #fcf3f1; } .dlg-toast.error .dlg-toast-icon { background: var(--db-clay); }
+.dlg-toast.info { border-left-color: var(--db-gold); } .dlg-toast.info .dlg-toast-icon { background: var(--db-gold); }
+@keyframes dlg-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+.dlg-backdrop { position: fixed; inset: 0; z-index: 350; background: rgba(33,38,37,.45); display: grid; place-items: center; padding: 20px; }
+.dlg-box { width: 100%; max-width: 420px; background: #fff; border-radius: 16px; padding: 22px; box-shadow: 0 24px 64px rgba(33,38,37,.28); font-family: var(--db-font-sans); color: var(--db-ink); animation: dlg-in .15s ease-out; }
+.dlg-box h3 { margin: 0 0 6px; font-family: var(--db-font-serif); font-size: 19px; }
+.dlg-box p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.5; color: var(--db-muted); }
+.dlg-box input, .dlg-box textarea { width: 100%; font: inherit; font-size: 13.5px; padding: 10px 12px; border: 1px solid var(--db-line); border-radius: 10px; background: var(--db-cream); margin-bottom: 14px; resize: vertical; box-sizing: border-box; }
+.dlg-box input:focus, .dlg-box textarea:focus { outline: 2px solid var(--db-rust); background: #fff; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }

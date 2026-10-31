@@ -3,6 +3,7 @@ import {
   getManagers, createManager, getPendingManagers, approveManager, rejectManager,
   setAccess, setDaysOff, assignBranch, getPasswordRequests, resolvePasswordRequest,
 } from "../controllers/userController.js";
+import { rateManager, managerRatings } from "../controllers/ratingController.js";
 import { protect, restrictTo } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -11,6 +12,8 @@ router.get("/password-requests", getPasswordRequests);
 router.get("/managers/pending", getPendingManagers);
 router.get("/managers", getManagers);
 router.post("/managers", createManager);
+router.get("/managers/:id/ratings", managerRatings);
+router.post("/managers/:id/ratings", rateManager);
 router.patch("/managers/:id/approve", approveManager);
 router.patch("/managers/:id/reject", rejectManager);
 router.patch("/managers/:id/access", setAccess);

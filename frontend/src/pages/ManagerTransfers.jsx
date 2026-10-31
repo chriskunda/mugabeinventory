@@ -6,9 +6,11 @@ import Modal from "../components/dashboard/Modal";
 import TransferNoteForm from "../components/dashboard/TransferNoteForm";
 import TransferNoteView from "../components/dashboard/TransferNoteView";
 import BranchAccessPanel from "../components/dashboard/BranchAccessPanel";
+import { useDialog } from "../components/ui/dialogContext";
 
 const ManagerTransfers = () => {
   const { user } = useAuth();
+  const { toast } = useDialog();
   const [transfers, setTransfers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -24,7 +26,15 @@ const ManagerTransfers = () => {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    let active = true;
+    transfersApi
+      .list()
+      .then((items) => { if (active) setTransfers(items); })
+      .catch((e) => { if (active) setError(e.message); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const handleCreate = async (payload) => {
     await transfersApi.create(payload);
@@ -33,8 +43,13 @@ const ManagerTransfers = () => {
   };
 
   const handleReceive = async (id) => {
-    await transfersApi.markReceived(id);
-    load();
+    try {
+      await transfersApi.markReceived(id);
+      toast("Marked as received", "success");
+      load();
+    } catch (e) {
+      toast(e.message, "error");
+    }
   };
 
   const handleDownload = async (transfer) => {
@@ -87,20 +102,20 @@ const ManagerTransfers = () => {
               <tbody>
                 {transfers.map((t) => (
                   <tr key={t._id}>
-                    <td data-label="Date">{new Date(t.date).toLocaleDateString()}</td>
+                    <td data-label="Date">{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td data-label="From">{t.fromBranch?.name}</td>
                     <td data-label="To">{t.toBranch?.name}</td>
                     <td data-label="Items">{t.lines.length}</td>
                     <td data-label="Status">
-                      <span className={`db-badge ${t.status}`}>{t.status}</span>
+                      <span className={`db-badge ${t.status}`}>{t.status === "sent" ? "Sent" : "Received"}</span>
                     </td>
                     <td data-label="">
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <button className="db-btn db-btn-ghost" onClick={() => setViewing(t)}>View</button>
                         <button className="db-btn db-btn-ghost" onClick={() => handleDownload(t)}>PDF</button>
-                        {t.status === "pending" && t.toBranch?.name === user?.branch && (
-                          <button className="db-btn db-btn-ghost" onClick={() => handleReceive(t._id)}>
-                            Mark received
+                        {t.status === "sent" && t.toBranch?.name === user?.branch && (
+                          <button className="db-btn db-btn-outline" onClick={() => handleReceive(t._id)}>
+                            Confirm received
                           </button>
                         )}
                       </div>

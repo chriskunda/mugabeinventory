@@ -19,7 +19,11 @@ import goalRoutes from "./src/routes/goalRoutes.js";
 import branchRoutes from "./src/routes/branchRoutes.js";
 import accessRoutes from "./src/routes/accessRoutes.js";
 import notificationRoutes from "./src/routes/notificationRoutes.js";
+import purchaseRoutes from "./src/routes/purchaseRoutes.js";
+import ratingRoutes from "./src/routes/ratingRoutes.js";
+import Goal from "./src/models/Goal.js";
 import { evaluateGoals } from "./src/controllers/goalController.js";
+import { reconciliationReminder } from "./src/utils/reminders.js";
 
 
 dotenv.config();
@@ -52,6 +56,8 @@ app.use("/api/goals", goalRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/branches", branchRoutes);
 app.use("/api/access", accessRoutes);
+app.use("/api/purchases", purchaseRoutes);
+app.use("/api/ratings", ratingRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -60,8 +66,13 @@ const PORT = process.env.PORT || 5000;
 
 const start = async () => {
   await connectDB();
-  evaluateGoals().catch(console.error);
-  setInterval(() => evaluateGoals().catch(console.error), 60 * 60 * 1000);
+  await Goal.syncIndexes().catch(console.error);
+  const tick = () => {
+    evaluateGoals().catch(console.error);
+    reconciliationReminder().catch(console.error);
+  };
+  tick();
+  setInterval(tick, 60 * 60 * 1000);
   app.listen(PORT, () => console.log(`API running on port ${PORT}`));
 };
 

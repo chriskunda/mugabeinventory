@@ -1,7 +1,8 @@
 import TransferNote from "../models/TransferNote.js";
+import User from "../models/User.js";
 import { findOrCreateBranch } from "../utils/branches.js";
-import AccessRequest from "../models/AccessRequest.js";
-import { todayKigali } from "../utils/access.js";
+import { branchApprovedOn, todayKigali } from "../utils/access.js";
+import { notifyUser } from "../utils/notify.js";
 import { startPdf } from "../utils/pdf.js";
 
 const TZ = "Africa/Kigali";
@@ -37,10 +38,9 @@ export const createTransfer = async (req, res, next) => {
     } else if (fromBranch) {
       const f = await findOrCreateBranch(fromBranch);
       if (String(f._id) !== String(fromId)) {
-        const ok = await AccessRequest.exists({
-          manager: req.user._id, kind: "branch", branch: f._id, date: todayKigali(), status: "approved",
-        });
-        if (!ok) return res.status(403).json({ message: `The admin hasn't approved you to work at ${f.name} today` });
+        if (!(await branchApprovedOn(req.user._id, f._id, todayKigali()))) {
+          return res.status(403).json({ message: `The admin hasn't approved you to work at ${f.name} today` });
+        }
         fromId = f._id;
       }
     }
@@ -53,7 +53,14 @@ export const createTransfer = async (req, res, next) => {
       fromBranch: fromId,
       toBranch: toDoc._id,
       lines: lines.map((l) => ({ size: String(l.size).trim(), qty: Number(l.qty) })),
+      status: req.user.role === "admin" ? "received" : "sent",
     });
+    if (note.status === "sent") {
+      const receivers = await User.find({ role: "manager", active: true, branch: toDoc._id }).select("_id");
+      await Promise.all(receivers.map((u) =>
+        notifyUser(u._id, "Incoming transfer", `${req.user.name} sent products to ${toDoc.name}. Confirm when they arrive.`)
+      ));
+    }
     res.status(201).json(note);
   } catch (err) {
     next(err);
@@ -79,12 +86,14 @@ export const markReceived = async (req, res, next) => {
   try {
     const note = await TransferNote.findById(req.params.id);
     if (!note) return res.status(404).json({ message: "Transfer note not found" });
+    if (note.status === "received") return res.status(400).json({ message: "Already marked as received" });
     const isDestination = String(note.toBranch) === String(req.user.branch?._id);
     if (req.user.role !== "admin" && !isDestination) {
       return res.status(403).json({ message: "Only the receiving branch can confirm receipt" });
     }
     note.status = "received";
     await note.save();
+    await notifyUser(note.createdBy, "Transfer received", "The receiving branch confirmed your transfer note.", "approved");
     res.json(note);
   } catch (err) {
     next(err);

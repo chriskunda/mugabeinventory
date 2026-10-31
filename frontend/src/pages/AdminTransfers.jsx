@@ -62,13 +62,13 @@ const AdminTransfers = () => {
               <tbody>
                 {transfers.map((t) => (
                   <tr key={t._id}>
-                    <td data-label="Date">{new Date(t.date).toLocaleDateString()}</td>
+                    <td data-label="Date">{new Date(t.createdAt).toLocaleDateString()}</td>
                     <td data-label="From">{t.fromBranch?.name}</td>
                     <td data-label="To">{t.toBranch?.name}</td>
                     <td data-label="Created by">{t.createdBy?.name}</td>
                     <td data-label="Items">{t.lines.length}</td>
                     <td data-label="Status">
-                      <span className={`db-badge ${t.status}`}>{t.status}</span>
+                      <span className={`db-badge ${t.status}`}>{t.status === "sent" ? "Sent" : "Received"}</span>
                     </td>
                     <td data-label="">
                       <div style={{ display: "flex", gap: 8 }}>

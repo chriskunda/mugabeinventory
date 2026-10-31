@@ -3,7 +3,7 @@ import User from "../models/User.js";
 import AccessRequest from "../models/AccessRequest.js";
 import { findBranch } from "../utils/branches.js";
 import { COMPANY_EMAIL, EMAIL_MESSAGE } from "../utils/validators.js";
-import { offDayBlocked, todayKigali, weekdayOf } from "../utils/access.js";
+import { offDayBlocked, isOffToday, todayKigali } from "../utils/access.js";
 import { notifyAdmins } from "../utils/notify.js";
 import { sendTokenCookie } from "../utils/generateToken.js";
 
@@ -120,7 +120,7 @@ export const requestDayAccess = async (req, res, next) => {
     if (!user.active || user.status !== "approved") return res.status(403).json({ message: "Your account can't request access" });
 
     const today = todayKigali();
-    if (!user.daysOff.includes(weekdayOf(today))) return res.status(400).json({ message: "Today isn't your day off. Try logging in again." });
+    if (!(await isOffToday(user))) return res.status(400).json({ message: "You're not on a day off today. Try logging in again." });
 
     const existing = await AccessRequest.findOne({ manager: user._id, kind: "day_off", date: today, status: "pending" });
     if (!existing) {

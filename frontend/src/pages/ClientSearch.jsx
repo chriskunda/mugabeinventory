@@ -16,7 +16,7 @@ const ClientSearch = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const canSearch = product.trim().length >= 2;
+  const canSearch = product.trim().length >= 2 || client.trim().length >= 2;
 
   const search = async (e) => {
     e.preventDefault();
@@ -35,19 +35,19 @@ const ClientSearch = () => {
   return (
     <div>
       <div className="db-page-head">
-        <div><h1>Client search</h1><p>A client came back with a complaint? Find what they bought and when.</p></div>
+        <div><h1>Client search</h1><p>Search by the client's name, phone number, the product, or any mix of them.</p></div>
       </div>
 
       <div className="db-panel"><div className="db-panel-body">
         <form onSubmit={search} style={{ paddingTop: 14 }}>
           <div className="db-field">
-            <label>1. Which product is the complaint about?</label>
+            <label>Product (optional)</label>
             <input value={product} onChange={(e) => setProduct(e.target.value)} placeholder="Tyre name or size, e.g. Michelin or 205/55R16" />
           </div>
           <div className="db-field-row">
             <div className="db-field">
-              <label>2. Client name or phone (optional)</label>
-              <input value={client} onChange={(e) => setClient(e.target.value)} placeholder="e.g. Jean or 0788…" />
+              <label>Client name or phone number</label>
+              <input value={client} onChange={(e) => setClient(e.target.value)} placeholder="e.g. Jean, or 0788 123 456" />
             </div>
             {isAdmin && (
               <div className="db-field">

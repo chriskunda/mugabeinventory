@@ -5,9 +5,11 @@ import Modal from "../components/dashboard/Modal";
 import DailyReportForm from "../components/dashboard/DailyReportForm";
 import ReportView from "../components/dashboard/ReportView";
 import BranchAccessPanel from "../components/dashboard/BranchAccessPanel";
+import { useDialog } from "../components/ui/dialogContext";
 
 const ManagerReports = () => {
   const { user } = useAuth();
+  const { prompt, toast } = useDialog();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,9 +33,21 @@ const ManagerReports = () => {
   };
 
   const requestEdit = async (id) => {
-    const reason = window.prompt("What needs to change on this report?") || "";
-    await reportsApi.requestEdit(id, reason);
-    load();
+    const reason = await prompt({
+      title: "Request an edit",
+      message: "What needs to change on this report?",
+      placeholder: "e.g. Wrong price on the second tyre",
+      confirmLabel: "Send request",
+      multiline: true,
+    });
+    if (reason === null) return;
+    try {
+      await reportsApi.requestEdit(id, reason);
+      toast("Request sent. Waiting for admin approval.", "info");
+      load();
+    } catch (error) {
+      toast(error.message, "error");
+    }
   };
 
   const handleDownload = async (report) => {

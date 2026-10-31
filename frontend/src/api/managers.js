@@ -11,4 +11,6 @@ export const managersApi = {
   assignBranch: (id, branch) => api.patch(`/users/managers/${id}/branch`, { branch }),
   passwordRequests: () => api.get("/users/password-requests"),
   resolvePassword: (id, approve) => api.patch(`/users/managers/${id}/password-request`, { approve }),
+  rate: (id, p) => api.post(`/users/managers/${id}/ratings`, p),
+  ratings: (id) => api.get(`/users/managers/${id}/ratings`),
 };

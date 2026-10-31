@@ -3,29 +3,30 @@ import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import { getRange } from "../utils/period.js";
 import { incomeStatement } from "../utils/finance.js";
+import { findBranch } from "../utils/branches.js";
 
-const EXCEEDED_AT = 1.1; // beat the target by 10%+ = "exceeded"; 100-110% = "achieved"
+const EXCEEDED_AT = 1.1;
 const money = (n) => `${Math.round(n).toLocaleString("en-US")} RWF`;
 
 export const evaluateGoals = async () => {
   const now = new Date();
-  const open = await Goal.find({ evaluated: false });
+  const open = await Goal.find({ evaluated: false }).populate("branch", "name");
   for (const g of open) {
     const { start, end, label } = getRange(g.type, g.period);
-    if (end > now) continue; // period not over yet
+    if (end > now) continue;
 
-    const { netSales } = await incomeStatement(start, end);
+    const { netSales } = await incomeStatement(start, end, g.branch?._id);
     const percent = Math.round((netSales / g.target) * 1000) / 10;
     const status = netSales >= g.target * EXCEEDED_AT ? "exceeded" : netSales >= g.target ? "achieved" : "failed";
-
     const verb = { exceeded: "exceeded", achieved: "achieved", failed: "did not reach" }[status];
+    const where = g.branch?.name || "All branches";
+
     const admins = await User.find({ role: "admin", active: true }).select("_id");
     await Notification.insertMany(
       admins.map((a) => ({
-        user: a._id,
-        kind: status,
-        title: `${g.type === "month" ? "Monthly" : "Yearly"} goal ${status}`,
-        message: `For ${label} you ${verb} your goal: ${money(netSales)} of ${money(g.target)} (${percent}%).`,
+        user: a._id, kind: status,
+        title: `${where}: ${g.type === "month" ? "monthly" : "yearly"} goal ${status}`,
+        message: `For ${label}, ${where} ${verb} the goal: ${money(netSales)} of ${money(g.target)} (${percent}%).`,
       }))
     );
     g.evaluated = true;
@@ -36,14 +37,15 @@ export const evaluateGoals = async () => {
 
 export const getGoals = async (req, res, next) => {
   try {
-    const goals = await Goal.find().sort({ period: -1 });
+    const goals = await Goal.find().populate("branch", "name").sort({ period: -1 });
     res.json(
       await Promise.all(
         goals.map(async (g) => {
           const { start, end } = getRange(g.type, g.period);
-          const { netSales } = await incomeStatement(start, end);
+          const { netSales } = await incomeStatement(start, end, g.branch?._id);
           return {
             ...g.toObject(),
+            branchName: g.branch?.name || "All branches",
             actual: g.evaluated ? g.result.actual : netSales,
             percent: Math.round((netSales / g.target) * 1000) / 10,
             status: g.evaluated ? g.result.status : "in_progress",
@@ -58,20 +60,17 @@ export const getGoals = async (req, res, next) => {
 
 export const saveGoal = async (req, res, next) => {
   try {
-    const { type, period, target } = req.body;
+    const { type, period, target, branch } = req.body;
     const okPeriod = type === "month" ? /^\d{4}-\d{2}$/.test(period) : /^\d{4}$/.test(period);
     if (!["month", "year"].includes(type) || !okPeriod || !(Number(target) > 0)) {
       return res.status(400).json({ message: "Valid type, period and target are required" });
     }
-    const existing = await Goal.findOne({ type, period });
-    if (existing?.evaluated) return res.status(400).json({ message: "That period is already closed" });
+    const branchId = branch ? (await findBranch(branch))._id : null;
+    const key = { type, period, branch: branchId };
+    if ((await Goal.findOne(key))?.evaluated) return res.status(400).json({ message: "That period is already closed" });
 
-    const goal = await Goal.findOneAndUpdate(
-      { type, period },
-      { target: Number(target), createdBy: req.user._id },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
-    evaluateGoals().catch(console.error); // handles goals set for periods already over
+    const goal = await Goal.findOneAndUpdate(key, { target: Number(target), createdBy: req.user._id }, { new: true, upsert: true, setDefaultsOnInsert: true });
+    evaluateGoals().catch(console.error);
     res.status(201).json(goal);
   } catch (err) {
     next(err);
@@ -92,7 +91,7 @@ export const deleteGoal = async (req, res, next) => {
 export const getNotifications = async (req, res, next) => {
   try {
     if (req.user.role === "admin") await evaluateGoals();
-    const items = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(30);
+    const items = await Notification.find({ user: req.user._id }).sort({ createdAt: -1 }).limit(40);
     res.json({ items, unread: items.filter((n) => !n.read).length });
   } catch (err) {
     next(err);
@@ -103,6 +102,24 @@ export const readAllNotifications = async (req, res, next) => {
   try {
     await Notification.updateMany({ user: req.user._id, read: false }, { read: true });
     res.json({ message: "ok" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteNotification = async (req, res, next) => {
+  try {
+    await Notification.deleteOne({ _id: req.params.id, user: req.user._id });
+    res.json({ message: "Deleted" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const clearNotifications = async (req, res, next) => {
+  try {
+    await Notification.deleteMany({ user: req.user._id });
+    res.json({ message: "Cleared" });
   } catch (err) {
     next(err);
   }

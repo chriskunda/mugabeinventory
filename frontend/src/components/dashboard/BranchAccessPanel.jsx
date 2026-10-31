@@ -2,20 +2,23 @@ import { useEffect, useState } from "react";
 import { accessApi } from "../../api/access";
 import { useAuth } from "../../context/AuthContext";
 import useBranches from "../../hooks/useBranches";
-import { todayKigali } from "../../utils/format";
+import { addDays, todayKigali } from "../../utils/format";
 import Modal from "./Modal";
+import StatusNote from "./StatusNote";
+import { useDialog } from "../ui/dialogContext";
 import Select from "../ui/Select";
 import DatePicker from "../ui/DatePicker";
 
 const BranchAccessPanel = () => {
   const { user } = useAuth();
+  const { toast } = useDialog();
   const { names } = useBranches();
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ branch: "", date: todayKigali(), reason: "" });
   const [error, setError] = useState("");
 
-  const load = () => accessApi.mine().then(setRows).catch(() => {});
+  const load = () => accessApi.mine().then((items) => setRows(items.filter((item) => item.kind === "branch"))).catch(() => {});
   useEffect(() => {
     load();
   }, []);
@@ -27,6 +30,7 @@ const BranchAccessPanel = () => {
       await accessApi.requestWork(form);
       setOpen(false);
       setForm({ branch: "", date: todayKigali(), reason: "" });
+      toast("Request sent. Waiting for admin approval.", "info");
       load();
     } catch (err) {
       setError(err.message);
@@ -44,13 +48,25 @@ const BranchAccessPanel = () => {
       </div>
       {rows.length > 0 && (
         <div className="db-panel-body">
+          {rows.some((r) => r.status === "pending") && (
+            <StatusNote status="pending">
+              Please wait for the admin to approve. They will also set how many days you can work there.
+            </StatusNote>
+          )}
+          {rows
+            .filter((r) => r.status === "approved" && String(r.resolvedAt || "").slice(0, 10) >= addDays(todayKigali(), -3))
+            .map((r) => (
+              <StatusNote key={r._id} status="approved">
+                You can work at {r.branch?.name} from {r.date} to {r.endDate || r.date}.
+              </StatusNote>
+            ))}
           <table className="db-table">
-            <thead><tr><th>Branch</th><th>Day</th><th>Status</th></tr></thead>
+            <thead><tr><th>Branch</th><th>Period</th><th>Status</th></tr></thead>
             <tbody>
               {rows.slice(0, 5).map((r) => (
                 <tr key={r._id}>
                   <td data-label="Branch">{r.branch?.name}</td>
-                  <td data-label="Day">{r.date}</td>
+                  <td data-label="Period">{r.endDate && r.endDate !== r.date ? `${r.date} → ${r.endDate}` : r.date}</td>
                   <td data-label="Status"><span className={`db-badge ${r.status}`}>{r.status}</span></td>
                 </tr>
               ))}

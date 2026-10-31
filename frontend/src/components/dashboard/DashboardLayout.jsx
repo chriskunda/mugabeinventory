@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useDialog } from "../ui/dialogContext";
 import { notificationsApi } from "../../api/admin";
 import { authApi } from "../../api/auth";
 import "./DashboardLayout.css";
@@ -9,8 +10,10 @@ const ADMIN_NAV = [
   { to: "/admin", label: "Overview", end: true },
   { to: "/admin/sales-reports", label: "Sales reports" },
   { to: "/admin/managers", label: "Managers" },
+  { to: "/admin/requests", label: "Requests" },
   { to: "/admin/branches", label: "Branches" },
   { to: "/admin/products", label: "Products" },
+  { to: "/admin/purchases", label: "Purchases" },
   { to: "/admin/transfers", label: "Transfer notes" },
   { to: "/admin/returns", label: "Returns" },
   { to: "/admin/search", label: "Client search" },
@@ -21,10 +24,14 @@ const MANAGER_NAV = [
   { to: "/manager", label: "Overview", end: true },
   { to: "/manager/reports", label: "Daily reports" },
   { to: "/manager/transfers", label: "Transfer notes" },
+  { to: "/manager/purchases", label: "Purchases" },
+  { to: "/manager/requests", label: "Requests" },
   { to: "/manager/search", label: "Client search" },
 ];
 
-// crop to a square and shrink, so the photo stays tiny
+const toastType = (kind) =>
+  ["approved", "achieved", "exceeded"].includes(kind) ? "success" : ["rejected", "failed"].includes(kind) ? "error" : "info";
+
 const resizeToDataUrl = (file, size = 160) =>
   new Promise((resolve, reject) => {
     const img = new Image();
@@ -46,8 +53,10 @@ const resizeToDataUrl = (file, size = 160) =>
 
 const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
   const { logout, setUser } = useAuth();
+  const { toast } = useDialog();
   const navigate = useNavigate();
   const fileRef = useRef(null);
+  const seen = useRef(null);
   const nav = role === "admin" ? ADMIN_NAV : MANAGER_NAV;
   const firstName = (user.name || "User").trim().split(" ")[0];
 
@@ -55,11 +64,21 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const load = () => notificationsApi.list().then(setNotes).catch(() => {});
+    const load = () =>
+      notificationsApi
+        .list()
+        .then((d) => {
+          if (seen.current) {
+            d.items.filter((n) => !n.read && !seen.current.has(n._id)).forEach((n) => toast(`${n.title}: ${n.message}`, toastType(n.kind)));
+          }
+          seen.current = new Set(d.items.map((n) => n._id));
+          setNotes(d);
+        })
+        .catch(() => {});
     load();
-    const t = setInterval(load, 60000);
+    const t = setInterval(load, 30000);
     return () => clearInterval(t);
-  }, []);
+  }, [toast]);
 
   const toggleBell = async () => {
     setOpen((o) => !o);
@@ -68,6 +87,14 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
       setNotes((n) => ({ ...n, unread: 0 }));
     }
   };
+  const removeNote = async (id) => {
+    await notificationsApi.remove(id).catch(() => {});
+    setNotes((n) => ({ ...n, items: n.items.filter((x) => x._id !== id) }));
+  };
+  const clearNotes = async () => {
+    await notificationsApi.clear().catch(() => {});
+    setNotes({ items: [], unread: 0 });
+  };
 
   const onPhoto = async (e) => {
     const file = e.target.files?.[0];
@@ -75,8 +102,9 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
     if (!file) return;
     try {
       setUser(await authApi.setPhoto(await resizeToDataUrl(file)));
+      toast("Photo updated", "success");
     } catch (err) {
-      window.alert(err.message);
+      toast(err.message, "error");
     }
   };
 
@@ -91,10 +119,7 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
   return (
     <div className="dashboard-app db-shell">
       <aside className="db-sidebar">
-        <div className="db-brand">
-          <span className="db-brand-mark">◆</span>
-          <span>Operations</span>
-        </div>
+        <div className="db-brand"><span className="db-brand-mark">◆</span><span>Ledger</span></div>
         <nav className="db-nav">
           {nav.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}
@@ -118,13 +143,22 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
             </button>
             {open && (
               <div className="db-bell-menu">
+                {notes.items.length > 0 && (
+                  <div className="db-bell-head">
+                    <span>Notifications</span>
+                    <button type="button" onClick={clearNotes}>Clear all</button>
+                  </div>
+                )}
                 {notes.items.length === 0 ? (
                   <div className="db-empty">No notifications</div>
                 ) : (
                   notes.items.map((n) => (
                     <div key={n._id} className={`db-note ${n.kind}`}>
-                      <strong>{n.title}</strong>
-                      <p>{n.message}</p>
+                      <div>
+                        <strong>{n.title}</strong>
+                        <p>{n.message}</p>
+                      </div>
+                      <button type="button" className="db-note-x" aria-label="Delete notification" onClick={() => removeNote(n._id)}>×</button>
                     </div>
                   ))
                 )}
@@ -141,9 +175,7 @@ const DashboardLayout = ({ role, user = { name: "User", branch: "" } }) => {
           </div>
         </header>
 
-        <main className="db-content">
-          <Outlet />
-        </main>
+        <main className="db-content"><Outlet /></main>
       </div>
     </div>
   );
